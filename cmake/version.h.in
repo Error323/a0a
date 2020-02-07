@@ -1,0 +1,8 @@
+#ifndef NDEBUG
+  #define NAME "@CMAKE_PROJECT_NAME@ (debug)"
+#else
+  #define NAME "@CMAKE_PROJECT_NAME@ (release)"
+#endif
+
+#define VERSION "@VERSION@"
+#define HUMAN_NAME NAME " " VERSION " (" __DATE__ ")"

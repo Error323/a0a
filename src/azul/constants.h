@@ -1,0 +1,18 @@
+// 1 + 1 + 5 + 5*4 + 16 + 1 + 2 + 7 + 2 + 7 = 62
+// |   |   |   |     |    |   |   |   |   |
+// |   |   |   |     |    |   |   |   |   them floor: v in {0,...,6}
+// |   |   |   |     |    |   |   |   them board: v in {0,...,5}
+// |   |   |   |     |    |   |   us floor: v in {0,...,6}
+// |   |   |   |     |    |   us board: v in {0,...,5}
+// |   |   |   |     |    us 1st tile: v in {0, 1}
+// |   |   |   |     center: v in {0,...,6}
+// |   |   |   factories: v in {0,...,5}
+// |   |   bag: v in {0,...,20}
+// |   them score: v in {0,...,255}
+// us score: v in {0,...,255}
+//
+// 8 + 8 + 5*5 + 5*4*3 + 16*3 + 1 + 2*(5*5*3 + 7*3 + 15*3) = 432 bit = 54 bytes
+
+/* tile types 5 in total, tile `FIRST' is handled differently */
+enum Tile { BLUE, WHITE, BLACK, RED, YELLOW, NUM_TILES };
+
