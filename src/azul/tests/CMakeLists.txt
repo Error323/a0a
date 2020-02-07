@@ -8,6 +8,7 @@ target_include_directories (center_test PUBLIC
 
 target_link_libraries (center_test
   ${GTEST_BOTH_LIBRARIES}
+  ${GLOG_LIBRARIES}
   ${CMAKE_THREAD_LIBS_INIT}
   azul
 )

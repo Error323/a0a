@@ -1,4 +1,5 @@
 #include <vector>
+#include <string>
 #include <stdint.h>
 
 #include "constants.h"
@@ -13,12 +14,18 @@ class Center {
   static const int NUM_TILES_PER_FACTORY = 4;
   /* nof tiles in the bag initially */
   static const int BAG_SIZE = 100;
+  /* maximum center tiles: 4*5 - 5 + 1 */
+  static const int NUM_CENTER = (NUM_TILES_PER_FACTORY - 1) * NUM_FACTORIES + 1;
 
   Center();
 
+  void BagFromString(const std::string bag);
+  void CenterFromString(const std::string center);
   void Reset();
   void NextRound();
+  void Clear();
   int Count(Position pos);
+  int Count(Position pos, Tile tile);
   int AddTile(Tile tile, Position pos, int num = 1);
   void TakeTiles(Position pos, Tile tile);
 
