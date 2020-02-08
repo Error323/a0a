@@ -19,6 +19,7 @@ class Center {
 
   Center();
 
+  std::string DebugStr();
   void BagFromString(const std::string bag);
   void CenterFromString(const std::string center);
   void Reset();
@@ -27,7 +28,7 @@ class Center {
   int Count(Position pos);
   int Count(Position pos, Tile tile);
   int AddTile(Tile tile, Position pos, int num = 1);
-  void TakeTiles(Position pos, Tile tile);
+  int TakeTiles(Position pos, Tile tile);
 
  private:
   std::vector<Tile> bag_;

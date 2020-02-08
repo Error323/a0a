@@ -37,4 +37,16 @@ TEST(CenterTest, CenterFromString) {
   c.CenterFromString("00_12_3344001111__2201234");
   EXPECT_EQ(3, c.Count(Center::FAC2));
   EXPECT_EQ(5, c.Count(Center::CENTER));
+  EXPECT_EQ(0, c.Count(Center::FAC4, Tile::YELLOW));
+  EXPECT_EQ(4, c.Count(Center::FAC4, Tile::WHITE));
+  EXPECT_EQ(1, c.Count(Center::CENTER, Tile::RED));
+}
+
+TEST(CenterTest, TakeTiles) {
+  Center c;
+  c.CenterFromString("00_12_3344001111__2201231334");
+  EXPECT_EQ(2, c.TakeTiles(Center::FAC1, Tile::BLUE));
+  EXPECT_EQ(9, c.Count(Center::CENTER));
+  EXPECT_EQ(3, c.TakeTiles(Center::CENTER, Tile::RED));
+  EXPECT_EQ(6, c.Count(Center::CENTER));
 }

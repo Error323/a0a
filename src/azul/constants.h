@@ -14,5 +14,6 @@
 // 8 + 8 + 5*5 + 5*4*3 + 16*3 + 1 + 2*(5*5*3 + 7*3 + 15*3) = 432 bit = 54 bytes
 
 /* tile types 5 in total, tile `FIRST' is handled differently */
+/*          0     1      2      3    4       5 */
 enum Tile { BLUE, WHITE, BLACK, RED, YELLOW, NUM_TILES };
 

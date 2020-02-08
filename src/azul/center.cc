@@ -1,6 +1,7 @@
 #include <algorithm>
 #include <bitset>
 #include <iostream>
+#include <sstream>
 #include <glog/logging.h>
 
 #include "center.h"
@@ -14,6 +15,38 @@ Center::Center() : bag_(BAG_SIZE), bag_size_(0) {
   }
 
   NextRound();
+}
+
+std::string Center::DebugStr() {
+  std::stringstream ss;
+  for (int i = 0; i < BAG_SIZE; i++) {
+    ss << bag_[i];
+  }
+  ss << std::endl;
+  for (int i = 0; i < BAG_SIZE; i++) {
+    if (i == bag_size_-1) {
+      ss << "^";
+    }
+    else {
+      ss << " ";
+    }
+  }
+  ss << std::endl;
+  ss << std::endl;
+  
+  for (int i = 0; i < 36; i++) {
+    if (i > 15 && i % 4 == 0) {
+      ss << "|";
+    }
+    else {
+      ss << " ";
+    }
+  }
+  ss << std::endl;
+  for (int i = 0; i < NUM_TILES; i++) {
+    ss << std::bitset<36>(center_[i]) << std::endl;
+  }
+  return ss.str();
 }
 
 void Center::BagFromString(const std::string bag) {
@@ -112,7 +145,20 @@ int Center::AddTile(Tile tile, Position pos, int num) {
   return num;
 }
 
-void Center::TakeTiles(Position pos, Tile tile) {
-  (void) pos;
-  (void) tile;
+int Center::TakeTiles(Position pos, Tile tile) {
+  uint64_t mask = pos == CENTER ? 0xffff : 0xf;
+  mask <<= pos * NUM_TILES_PER_FACTORY;
+  int num = Count(pos, tile);
+  for (int i = 0; i < NUM_TILES; i++) {
+    Tile t = Tile(i);
+    int n = Count(pos, t);
+    if (pos != CENTER || t == tile) {
+      center_[t] &= ~mask;
+    }
+    if (pos != CENTER && t != tile) {
+      AddTile(t, CENTER, n);
+    }
+  }
+  return num;
 }
+
