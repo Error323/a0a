@@ -52,7 +52,7 @@ class Center {
   std::string DebugStr();
   void CenterFromString(const std::string center);
   void Reset();
-  void NextRound();
+  bool IsRoundOver();
   void Clear();
   int Count(Position pos);
   int Count(Position pos, Tile tile);
@@ -61,6 +61,6 @@ class Center {
   int TakeTiles(Position pos, Tile tile);
 
  private:
-  Holder center_[NUM_FACTORIES + 1];
+  Holder center_[NUM_POS];
   Bag bag_;
 };

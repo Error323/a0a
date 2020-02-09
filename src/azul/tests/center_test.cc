@@ -85,3 +85,14 @@ TEST(CenterTest, TakeTiles) {
   EXPECT_EQ(3, c.TakeTiles(Position::CENTER, Tile::RED));
   EXPECT_EQ(6, c.Count(Position::CENTER));
 }
+
+TEST(CenterTest, IsRoundOver) {
+  Center c;
+  EXPECT_FALSE(c.IsRoundOver());
+  c.Clear();
+  EXPECT_TRUE(c.IsRoundOver());
+  c.CenterFromString("____________________111____________");
+  EXPECT_FALSE(c.IsRoundOver());
+  c.TakeTiles(Position::CENTER, Tile::WHITE);
+  EXPECT_TRUE(c.IsRoundOver());
+}

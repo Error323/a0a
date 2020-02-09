@@ -81,7 +81,7 @@ Center::Center() { Reset(); }
 
 std::string Center::DebugStr() {
   std::stringstream ss;
-  for (int i = 0; i < NUM_POS + 1; i++) {
+  for (int i = 0; i < NUM_POS; i++) {
     for (int j = 0; j < NUM_TILES; j++) {
       ss << center_[Position(i)].Count(Tile(j)) << " ";
     }
@@ -149,7 +149,14 @@ int Center::TakeTiles(Position pos, Tile tile) {
   return num;
 }
 
-void Center::NextRound() {}
+bool Center::IsRoundOver() {
+  for (int i = 0; i < NUM_POS; i++) {
+    if (center_[i].Count() > 0) {
+      return false;
+    }
+  }
+  return true;
+}
 
 int Center::Count(Position pos, Tile tile) { return center_[pos].Count(tile); }
 
