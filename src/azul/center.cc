@@ -7,7 +7,10 @@
 #include "center.h"
 #include "utils/random.h"
 
-Bag::Bag() : size_(BAG_SIZE) { Reset(); }
+// ============================================================================
+// Bag class
+// ============================================================================
+Bag::Bag() : size_(0) {}
 
 void Bag::Reset() {
   for (int i = 0; i < NUM_TILES; i++) {
@@ -16,12 +19,36 @@ void Bag::Reset() {
   size_ = BAG_SIZE;
 }
 
+Tile Bag::Pop() {
+  if (size_ == 0) {
+    Reset();
+  }
+
+  float r = utils::Random::Get().GetFloat(1.0f);
+  int sum = 0;
+  // roulette wheel selection of a tile
+  for (int i = 0; i < NUM_TILES - 1; i++) {
+    sum += tiles[i];
+    if (r < (sum / float(size_))) {
+      tiles[i]--;
+      size_--;
+      return Tile(i);
+    }
+  }
+
+  tiles[NUM_TILES - 1]--;
+  size_--;
+  return Tile(NUM_TILES - 1);
+}
+
+// ============================================================================
+// Holder class
+// ============================================================================
 Holder::Holder() : counts_(0) {}
 
 int Holder::Add(Tile tile, int num) {
   int current = Count(tile);
   num += current;
-  CHECK(num <= MAX) << "num = " << num;
   uint32_t mask = MAX << (tile * NBITS);
   counts_ &= ~mask;
   counts_ |= num << (tile * NBITS);
@@ -47,28 +74,9 @@ int Holder::Count() {
   return sum;
 }
 
-Tile Bag::Pop() {
-  if (size_ == 0) {
-    Reset();
-  }
-
-  float r = utils::Random::Get().GetFloat(1.0f);
-  int sum = 0;
-  // roulette wheel selection of a tile
-  for (int i = 0; i < NUM_TILES - 1; i++) {
-    sum += tiles[i];
-    if (r < (sum / float(size_))) {
-      tiles[i]--;
-      size_--;
-      return Tile(i);
-    }
-  }
-
-  tiles[NUM_TILES - 1]--;
-  size_--;
-  return Tile(NUM_TILES - 1);
-}
-
+// ============================================================================
+// Center class
+// ============================================================================
 Center::Center() { Reset(); }
 
 std::string Center::DebugStr() {
@@ -121,21 +129,8 @@ void Center::Reset() {
   }
 }
 
-int Center::AddTile(Tile tile, Position pos, int num) {
-  int count = center_[pos].Count();
-  if (pos != CENTER) {
-    int free = NUM_TILES_PER_FACTORY - count;
-    if (num > free) {
-      center_[pos].Add(tile, free);
-      num -= free;
-    } else {
-      center_[pos].Add(tile, num);
-      num = 0;
-    }
-  }
-
-  center_[CENTER].Add(tile, num);
-  return pos == CENTER ? 0 : num;
+void Center::AddTile(Tile tile, Position pos, int num) {
+  center_[pos].Add(tile, num);
 }
 
 int Center::TakeTiles(Position pos, Tile tile) {
@@ -145,6 +140,7 @@ int Center::TakeTiles(Position pos, Tile tile) {
       if (i == tile) {
         continue;
       }
+      // move remaining tiles from the factory to the center
       int n = center_[pos].Take(Tile(i));
       center_[CENTER].Add(Tile(i), n);
     }

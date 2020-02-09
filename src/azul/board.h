@@ -18,6 +18,7 @@ class Board {
   void Reset();
   void UpdateScore(int row, int col, int tile);
   int16_t Score();
+  bool IsTerminal() { return terminal_; }
 
  private:
   struct Line {
@@ -30,4 +31,6 @@ class Board {
   int16_t score_;
   uint8_t floor_line_;
   bool terminal_;
+
+  uint32_t Lookup(int row, int col);
 };

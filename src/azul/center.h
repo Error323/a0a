@@ -23,8 +23,6 @@ class Bag {
 
 class Holder {
  public:
-  static const int NBITS = 4;
-  static const int MAX = (1 << NBITS) - 1;
   Holder();
 
   int Take(Tile tile);
@@ -34,6 +32,8 @@ class Holder {
   void Clear();
 
  private:
+  static const int NBITS = 4;
+  static const int MAX = (1 << NBITS) - 1;
   // 4 bits per type, total: 20 bit
   uint32_t counts_;
 };
@@ -45,7 +45,7 @@ class Center {
   /* tiles a single factory can hold maximum */
   static const int NUM_TILES_PER_FACTORY = 4;
   /* maximum center tiles: 4*5 - 5 + 1 */
-  static const int NUM_CENTER = (NUM_TILES_PER_FACTORY - 1) * NUM_FACTORIES + 1;
+  static const int NUM_CENTER = (NUM_TILES_PER_FACTORY - 1) * NUM_FACTORIES;
 
   Center();
 
@@ -56,7 +56,8 @@ class Center {
   void Clear();
   int Count(Position pos);
   int Count(Position pos, Tile tile);
-  int AddTile(Tile tile, Position pos, int num = 1);
+  // assume we can always add tiles to the center legally
+  void AddTile(Tile tile, Position pos, int num = 1);
   int TakeTiles(Position pos, Tile tile);
 
  private:

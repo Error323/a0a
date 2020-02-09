@@ -1,11 +1,16 @@
 #include "board.h"
 #include <algorithm>
 
+// masks for all tiles bonusses
 static const uint32_t ALL_TILES[] = {0x1041041, 0x820830, 0x410608, 0x20c104,
                                      0x182082};
+// masks for column bonus
 static const uint32_t COLUMNS[] = {0x1084210, 0x842108, 0x421084, 0x210842,
                                    0x108421};
+// masks for row bonus
 static const uint32_t ROWS[] = {0x1f00000, 0xf8000, 0x7c00, 0x3e0, 0x1f};
+
+// floorline penalties
 static const int PENALTY[] = {0, 1, 2, 4, 6, 8, 11, 14};
 static const int BONUS_TILES = 10;
 static const int BONUS_COLS = 2;
@@ -44,11 +49,15 @@ void Board::ApplyMove(Move move, int num_tiles) {
 
 void Board::IncreaseFloorline() { floor_line_++; }
 
+uint32_t Board::Lookup(int row, int col) {
+  uint32_t mask = ROWS[row] | COLUMNS[col];
+  mask &= wall_;
+  return 0ul;
+}
+
 void Board::UpdateScore(int row, int col, int tile) {
-  uint32_t mask = wall_ & ROWS[row];
-  mask |= wall_ & COLUMNS[col];
   // NOTE: Use magic bitboards to determine row + column score
-  // score_ += Lookup(mask, row, col);
+  score_ += __builtin_popcount(Lookup(row, col)) + 1;
 
   if ((wall_ & COLUMNS[col]) == COLUMNS[col]) {
     score_ += BONUS_COLS;
