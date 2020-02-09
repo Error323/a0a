@@ -1,164 +1,161 @@
+#include <glog/logging.h>
 #include <algorithm>
 #include <bitset>
 #include <iostream>
 #include <sstream>
-#include <glog/logging.h>
 
 #include "center.h"
+#include "utils/random.h"
 
-Center::Center() : bag_(BAG_SIZE), bag_size_(0) {
-  // fill up the bag with 20 tiles of each type
+Bag::Bag() : size_(BAG_SIZE) { Reset(); }
+
+void Bag::Reset() {
   for (int i = 0; i < NUM_TILES; i++) {
-    for (int j = 0, n = BAG_SIZE / NUM_TILES; j < n; j++) {
-      bag_[i * n + j] = Tile(i);
+    tiles[i] = BAG_SIZE / NUM_TILES;
+  }
+  size_ = BAG_SIZE;
+}
+
+Holder::Holder() : counts_(0) {}
+
+int Holder::Add(Tile tile, int num) {
+  int current = Count(tile);
+  num += current;
+  CHECK(num <= MAX) << "num = " << num;
+  uint32_t mask = MAX << (tile * NBITS);
+  counts_ &= ~mask;
+  counts_ |= num << (tile * NBITS);
+  return num;
+}
+
+int Holder::Take(Tile tile) {
+  uint32_t mask = MAX << (tile * NBITS);
+  int num = Count(tile);
+  counts_ &= ~mask;
+  return num;
+}
+
+void Holder::Clear() { counts_ = 0; }
+
+int Holder::Count(Tile tile) { return (counts_ >> (tile * NBITS)) & MAX; }
+
+int Holder::Count() {
+  int sum = 0;
+  for (int i = 0; i < NUM_TILES; i++) {
+    sum += Count(Tile(i));
+  }
+  return sum;
+}
+
+Tile Bag::Pop() {
+  if (size_ == 0) {
+    Reset();
+  }
+
+  float r = utils::Random::Get().GetFloat(1.0f);
+  int sum = 0;
+  // roulette wheel selection of a tile
+  for (int i = 0; i < NUM_TILES - 1; i++) {
+    sum += tiles[i];
+    if (r < (sum / float(size_))) {
+      tiles[i]--;
+      size_--;
+      return Tile(i);
     }
   }
 
-  NextRound();
+  tiles[NUM_TILES - 1]--;
+  size_--;
+  return Tile(NUM_TILES - 1);
 }
+
+Center::Center() { Reset(); }
 
 std::string Center::DebugStr() {
   std::stringstream ss;
-  for (int i = 0; i < BAG_SIZE; i++) {
-    ss << bag_[i];
-  }
-  ss << std::endl;
-  for (int i = 0; i < BAG_SIZE; i++) {
-    if (i == bag_size_-1) {
-      ss << "^";
+  for (int i = 0; i < NUM_POS + 1; i++) {
+    for (int j = 0; j < NUM_TILES; j++) {
+      ss << center_[Position(i)].Count(Tile(j)) << " ";
     }
-    else {
-      ss << " ";
-    }
-  }
-  ss << std::endl;
-  ss << std::endl;
-  
-  for (int i = 0; i < 36; i++) {
-    if (i > 15 && i % 4 == 0) {
-      ss << "|";
-    }
-    else {
-      ss << " ";
-    }
-  }
-  ss << std::endl;
-  for (int i = 0; i < NUM_TILES; i++) {
-    ss << std::bitset<36>(center_[i]) << std::endl;
+    ss << std::endl;
   }
   return ss.str();
 }
 
-void Center::BagFromString(const std::string bag) {
-  CHECK(bag.size() == BAG_SIZE);
-
-  for (int i = 0; i < Tile::NUM_TILES; i++) {
-    center_[i] = 0ull;
-  }
-
-  for (size_t i = 0; i < bag.size(); i++) {
-    Tile t = Tile(bag[i] - '0');
-    bag_[BAG_SIZE - i - 1] = t;
-  }
-
-  bag_size_ = BAG_SIZE;
-  NextRound();
-}
-
 void Center::CenterFromString(const std::string center) {
-  CHECK(center.size() <= NUM_FACTORIES * NUM_TILES_PER_FACTORY + NUM_CENTER);
+  CHECK(center.size() == NUM_FACTORIES * NUM_TILES_PER_FACTORY + NUM_CENTER);
   Clear();
-  for (size_t i = 0; i < center.size(); i++) {
+  // fill the factories
+  for (size_t i = 0; i < NUM_FACTORIES * NUM_TILES_PER_FACTORY; i++) {
     if (center[i] == '_') {
       continue;
     }
+    Tile tile = Tile(center[i] - '0');
+    Position pos = Position(i / NUM_TILES_PER_FACTORY);
+    center_[pos].Add(tile);
+  }
 
-    Tile t = Tile(center[i] - '0');
-    if (i < NUM_FACTORIES * NUM_TILES_PER_FACTORY) {
-      AddTile(t, Position(i / NUM_TILES_PER_FACTORY));
+  // fill the center
+  for (size_t i = 0; i < NUM_CENTER; i++) {
+    size_t n = i + NUM_FACTORIES * NUM_TILES_PER_FACTORY;
+    if (center[n] == '_') {
+      continue;
     }
-    else {
-      AddTile(t, CENTER);
-    }
+    Tile tile = Tile(center[n] - '0');
+    center_[CENTER].Add(tile);
   }
 }
 
 void Center::Clear() {
-  Reset();
-  for (int i = 0; i < Tile::NUM_TILES; i++) {
-    center_[i] = 0ull;
+  for (int i = 0; i < NUM_FACTORIES + 1; i++) {
+    center_[i].Clear();
   }
 }
 
 void Center::Reset() {
-  std::random_shuffle(bag_.begin(), bag_.end());
-  bag_size_ = BAG_SIZE;
-}
-
-void Center::NextRound() {
-  if (bag_size_ == 0) {
-    Reset();
-  }
-
   for (int i = 0; i < NUM_FACTORIES; i++) {
     for (int j = 0; j < NUM_TILES_PER_FACTORY; j++) {
-      bag_size_--;
-      Tile t = bag_[bag_size_];
-      AddTile(t, Position(i));
+      Tile t = bag_.Pop();
+      center_[i].Add(t);
     }
   }
-}
-
-int Center::Count(Position pos, Tile tile) {
-  uint64_t f = center_[tile];
-  f >>= pos * NUM_TILES_PER_FACTORY;
-  uint64_t mask = pos == CENTER ? 0xffff : 0xf;
-  return __builtin_popcountll(f & mask);
-}
-
-int Center::Count(Position pos) {
-  uint64_t f = center_[0];
-  for (int i = 1; i < NUM_TILES; i++) {
-    f |= center_[i];
-  }
-  f >>= pos * NUM_TILES_PER_FACTORY;
-  uint64_t mask = pos == CENTER ? 0xffff : 0xf;
-  return __builtin_popcountll(f & mask);
 }
 
 int Center::AddTile(Tile tile, Position pos, int num) {
-  uint64_t mask = pos == CENTER ? 0xffff : 0xf;
-  mask <<= pos * NUM_TILES_PER_FACTORY;
-  uint64_t f = center_[0];
-  for (int i = 1; i < NUM_TILES; i++) {
-    f |= center_[i];
+  int count = center_[pos].Count();
+  if (pos != CENTER) {
+    int free = NUM_TILES_PER_FACTORY - count;
+    if (num > free) {
+      center_[pos].Add(tile, free);
+      num -= free;
+    } else {
+      center_[pos].Add(tile, num);
+      num = 0;
+    }
   }
-  uint64_t taken = 0ull;
-  f = ~f & mask;
-  while (f && num) {
-    int i = __builtin_ffsll(f) - 1;
-    taken |= (1ull << i);
-    f ^= (1ull << i);
-    num--;
-  }
-  center_[tile] |= taken;
-  return num;
+
+  center_[CENTER].Add(tile, num);
+  return pos == CENTER ? 0 : num;
 }
 
 int Center::TakeTiles(Position pos, Tile tile) {
-  uint64_t mask = pos == CENTER ? 0xffff : 0xf;
-  mask <<= pos * NUM_TILES_PER_FACTORY;
-  int num = Count(pos, tile);
-  for (int i = 0; i < NUM_TILES; i++) {
-    Tile t = Tile(i);
-    int n = Count(pos, t);
-    if (pos != CENTER || t == tile) {
-      center_[t] &= ~mask;
-    }
-    if (pos != CENTER && t != tile) {
-      AddTile(t, CENTER, n);
+  int num = center_[pos].Take(tile);
+  if (pos != CENTER) {
+    for (int i = 0; i < NUM_TILES; i++) {
+      if (i == tile) {
+        continue;
+      }
+      int n = center_[pos].Take(Tile(i));
+      center_[CENTER].Add(Tile(i), n);
     }
   }
+
   return num;
 }
+
+void Center::NextRound() {}
+
+int Center::Count(Position pos, Tile tile) { return center_[pos].Count(tile); }
+
+int Center::Count(Position pos) { return center_[pos].Count(); }
 

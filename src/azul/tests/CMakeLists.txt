@@ -1,16 +1,23 @@
-add_executable (center_test
-  center_test.cc
-)
+set (tests center board)
 
-target_include_directories (center_test PUBLIC
-  ${CMAKE_SOURCE_DIR}/src
-)
+foreach (test ${tests})
+  set (name ${test}_test)
 
-target_link_libraries (center_test
-  ${GTEST_BOTH_LIBRARIES}
-  ${GLOG_LIBRARIES}
-  ${CMAKE_THREAD_LIBS_INIT}
-  azul
-)
+  add_executable (${name}
+    ${name}.cc
+  )
 
-add_test (center_test ${CMAKE_BINARY_DIR}/center_test)
+  target_include_directories (${name} PUBLIC
+    ${CMAKE_SOURCE_DIR}/src
+  )
+
+  target_link_libraries (${name}
+    ${GTEST_BOTH_LIBRARIES}
+    ${GLOG_LIBRARIES}
+    ${CMAKE_THREAD_LIBS_INIT}
+    azul
+  )
+
+  add_test (${name} ${CMAKE_BINARY_DIR}/${name})
+endforeach()
+

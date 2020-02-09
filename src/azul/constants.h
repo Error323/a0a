@@ -1,3 +1,4 @@
+#pragma once
 // 1 + 1 + 5 + 5*4 + 16 + 1 + 2 + 7 + 2 + 7 = 62
 // |   |   |   |     |    |   |   |   |   |
 // |   |   |   |     |    |   |   |   |   them floor: v in {0,...,6}
@@ -16,4 +17,10 @@
 /* tile types 5 in total, tile `FIRST' is handled differently */
 /*          0     1      2      3    4       5 */
 enum Tile { BLUE, WHITE, BLACK, RED, YELLOW, NUM_TILES };
+
+/* part of an action or move */
+enum Position {FAC1, FAC2, FAC3, FAC4, FAC5, CENTER, NUM_POS};
+
+/* part of an action or move */
+enum Line {LINE1, LINE2, LINE3, LINE4, LINE5, FLOORLINE, NUM_LINES};
 

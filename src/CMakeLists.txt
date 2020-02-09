@@ -1,4 +1,5 @@
 add_subdirectory (azul)
+add_subdirectory (utils)
 
 add_executable (a0a
   main.cc
