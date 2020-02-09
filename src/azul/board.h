@@ -16,16 +16,18 @@ class Board {
   void IncreaseFloorline();
   void NextRound();
   void Reset();
+  void UpdateScore(int row, int col, int tile);
   int16_t Score();
 
  private:
   struct Line {
-    uint8_t tile_type;
-    uint8_t count;
+    uint8_t tile_type : 4;
+    uint8_t count : 4;
   };
 
   Line left_[SIZE];
   uint32_t wall_;  ///< using 25 bit for the wall (1 bit per tile)
   int16_t score_;
   uint8_t floor_line_;
+  bool terminal_;
 };

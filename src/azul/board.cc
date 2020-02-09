@@ -1,9 +1,19 @@
 #include "board.h"
 #include <algorithm>
 
+static const uint32_t ALL_TILES[] = {0x1041041, 0x820830, 0x410608, 0x20c104,
+                                     0x182082};
+static const uint32_t COLUMNS[] = {0x1084210, 0x842108, 0x421084, 0x210842,
+                                   0x108421};
+static const uint32_t ROWS[] = {0x1f00000, 0xf8000, 0x7c00, 0x3e0, 0x1f};
 static const int PENALTY[] = {0, 1, 2, 4, 6, 8, 11, 14};
+static const int BONUS_TILES = 10;
+static const int BONUS_COLS = 2;
+static const int BONUS_ROWS = 7;
 
-Board::Board() : wall_(0), score_(0), floor_line_(0) {}
+Board::Board() : wall_(0), score_(0), floor_line_(0), terminal_(false) {
+  Reset();
+}
 
 void Board::Reset() {
   for (int i = 0; i < SIZE; i++) {
@@ -12,6 +22,7 @@ void Board::Reset() {
   wall_ = 0;
   score_ = 0;
   floor_line_ = 0;
+  terminal_ = false;
 }
 
 void Board::ApplyMove(Move move, int num_tiles) {
@@ -33,6 +44,20 @@ void Board::ApplyMove(Move move, int num_tiles) {
 
 void Board::IncreaseFloorline() { floor_line_++; }
 
+void Board::UpdateScore(int row, int col, int tile) {
+  uint32_t mask = wall_ & ROWS[row];
+  mask |= wall_ & COLUMNS[col];
+  // NOTE: Use magic bitboards to determine row + column score
+  // score_ += Lookup(mask, row, col);
+
+  if ((wall_ & COLUMNS[col]) == COLUMNS[col]) {
+    score_ += BONUS_COLS;
+    terminal_ = true;
+  }
+  score_ += (wall_ & ROWS[row]) == ROWS[row] ? BONUS_ROWS : 0;
+  score_ += (wall_ & ALL_TILES[tile]) == ALL_TILES[tile] ? BONUS_TILES : 0;
+}
+
 static int Column(int row, int tile) { return (row + tile) % Board::SIZE; }
 
 void Board::NextRound() {
@@ -43,8 +68,7 @@ void Board::NextRound() {
     if (left_[i].count == (i + 1)) {
       int j = Column(i, left_[i].tile_type);
       wall_ |= (1 << (i * SIZE + j));
-      // NOTE: Use magic bitboards to determine row + column score
-      // UpdateScore(i, j);
+      UpdateScore(i, j, left_[i].tile_type);
     }
   }
 
