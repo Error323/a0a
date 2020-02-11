@@ -1,4 +1,5 @@
 add_library (azul STATIC)
+add_executable (magics magics.cc)
 
 target_sources (azul PRIVATE
   center.cc
@@ -18,5 +19,6 @@ target_link_libraries (azul
   ${CMAKE_THREAD_LIBS_INIT}
   utils
 )
+
 
 add_subdirectory (tests)
