@@ -2,62 +2,17 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
+#define NUM_TESTS 1024
 #define SIZE 5
-#define BITS 4
-#define MARKER 'X'
-#define ARRAY_SIZE(x) (sizeof(x) / sizeof(x[0]))
+#define BITS 8
 
 // masks for column bonus
 static const uint32_t ROWS[] = {0x108421, 0x210842, 0x421084, 0x842108,
                                 0x1084210};
 // masks for row bonus
 static const uint32_t COLUMNS[] = {0x1f, 0x3e0, 0x7c00, 0xf8000, 0x1f00000};
-
-void print_bb(uint32_t b) {
-  for (int i = 0; i < SIZE; i++) {
-    for (int j = 0; j < SIZE; j++) {
-      int shift = (SIZE * SIZE) - (i * SIZE + j) - 1;
-      printf("%c ", int((b >> shift) & 1) ? MARKER : '.');
-    }
-    printf("\n");
-  }
-}
-
-void print_bb(uint32_t b1, uint32_t b2) {
-  for (int i = 0; i < SIZE; i++) {
-    for (int j = 0; j < SIZE; j++) {
-      int shift = (SIZE * SIZE) - (i * SIZE + j) - 1;
-      printf("%c ", int((b1 >> shift) & 1) ? MARKER : '.');
-    }
-    printf("   ");
-    for (int j = 0; j < SIZE; j++) {
-      int shift = (SIZE * SIZE) - (i * SIZE + j) - 1;
-      printf("%c ", int((b2 >> shift) & 1) ? MARKER : '.');
-    }
-    printf("\n");
-  }
-}
-
-void print_bb(uint32_t b1, uint32_t b2, uint32_t b3) {
-  for (int i = 0; i < SIZE; i++) {
-    for (int j = 0; j < SIZE; j++) {
-      int shift = (SIZE * SIZE) - (i * SIZE + j) - 1;
-      printf("%c ", int((b1 >> shift) & 1) ? MARKER : '.');
-    }
-    printf("   ");
-    for (int j = 0; j < SIZE; j++) {
-      int shift = (SIZE * SIZE) - (i * SIZE + j) - 1;
-      printf("%c ", int((b2 >> shift) & 1) ? MARKER : '.');
-    }
-    printf("   ");
-    for (int j = 0; j < SIZE; j++) {
-      int shift = (SIZE * SIZE) - (i * SIZE + j) - 1;
-      printf("%c ", int((b3 >> shift) & 1) ? MARKER : '.');
-    }
-    printf("\n");
-  }
-}
 
 uint32_t random_uint32() {
   uint32_t u1, u2;
@@ -66,9 +21,7 @@ uint32_t random_uint32() {
   return u1 | (u2 << 16);
 }
 
-uint32_t random_uint32_fewbits() {
-  return random_uint32() & random_uint32() & random_uint32();
-}
+uint32_t random_uint32_fewbits() { return random_uint32() & random_uint32(); }
 
 int pop_1st_bit(uint32_t *bb) {
   int index = __builtin_ffs(*bb);
@@ -93,61 +46,66 @@ uint32_t rmask(int sq) {
   return result;
 }
 
-uint32_t cols(int sq, uint32_t block) {
-  uint32_t result = 0ul;
+int score(int sq, uint32_t block) {
+  uint32_t hor = 0ul, ver = 0ul;
   int row = sq / SIZE, col = sq % SIZE, i;
+
+  // horizontal
   for (i = col + 1; i <= 4; i++) {
     if (block & (1ul << (i + row * SIZE))) break;
-    result |= (1ul << (i + row * SIZE));
+    hor |= (1ul << (i + row * SIZE));
   }
   for (i = col - 1; i >= 0; i--) {
     if (block & (1ul << (i + row * SIZE))) break;
-    result |= (1ul << (i + row * SIZE));
+    hor |= (1ul << (i + row * SIZE));
   }
-  return result;
-}
 
-uint32_t rows(int sq, uint32_t block) {
-  uint32_t result = 0ul;
-  int row = sq / SIZE, col = sq % SIZE, i;
+  // vertical
   for (i = row + 1; i <= 4; i++) {
     if (block & (1ul << (col + i * SIZE))) break;
-    result |= (1ul << (col + i * SIZE));
+    ver |= (1ul << (col + i * SIZE));
   }
   for (i = row - 1; i >= 0; i--) {
     if (block & (1ul << (col + i * SIZE))) break;
-    result |= (1ul << (col + i * SIZE));
+    ver |= (1ul << (col + i * SIZE));
   }
-  return result;
+
+  int hor_score = __builtin_popcount(hor);
+  int ver_score = __builtin_popcount(ver);
+
+  if (hor_score) hor_score++;
+  if (ver_score) ver_score++;
+  if (hor_score + ver_score == 0) return 1;
+
+  return hor_score + ver_score;
 }
 
 int transform(uint32_t b, uint32_t magic, int bits) {
   b *= magic;
   b >>= 32 - bits;
-  return (int)b;
+  return static_cast<int>(b);
 }
 
-static uint32_t count[SIZE * SIZE][1 << BITS];
+static uint8_t count[SIZE * SIZE][1 << BITS];
 
-uint32_t find_magic(int sq, int m, int hor) {
-  uint32_t mask, b[1 << BITS], magic;
-  uint32_t c[1 << BITS];
-  uint32_t *used = count[sq];
+uint32_t find_magic(int sq, int m) {
+  uint32_t mask, b[1 << 8], magic;
+  uint8_t c[1 << 8];
+  uint8_t *used = count[sq];
   int i, j, n, fail;
   uint64_t k;
 
   mask = rmask(sq);
-  mask &= hor ? COLUMNS[sq / SIZE] : ROWS[sq % SIZE];
   n = __builtin_popcount(mask);
 
   for (i = 0; i < (1 << n); i++) {
     b[i] = index_to_uint32(i, n, mask);
-    c[i] = hor ? cols(sq, b[i]) : rows(sq, b[i]);
+    c[i] = score(sq, b[i]);
   }
 
-  for (k = 0; k < 100000000ull; k++) {
+  for (k = 0; k < 10000000000ull; k++) {
     magic = random_uint32_fewbits();
-    for (i = 0; i < (1 << n); i++) used[i] = 0ul;
+    memset(used, 0, (1 << m) * sizeof(used[0]));
     for (i = 0, fail = 0; !fail && i < (1 << n); i++) {
       j = transform(b[i], magic, m);
       if (used[j] == 0ul)
@@ -163,38 +121,32 @@ uint32_t find_magic(int sq, int m, int hor) {
 }
 
 int main() {
-  uint32_t tests[] = {
-      0b0000001000001110000001000,
-      0b0000001000001010000001000,
-  };
+  srand(time(0));
 
-  int squares[] = {
-      13,
-      13,
-  };
+  uint32_t tests[NUM_TESTS];
+  int squares[NUM_TESTS];
+  int results[NUM_TESTS];
+  for (int i = 0; i < NUM_TESTS; i++) {
+    tests[i] = random_uint32() & ((1ul << SIZE * SIZE) - 1);
+    squares[i] = (int)random() % (SIZE * SIZE);
+    results[i] = score(squares[i], ~tests[i] & rmask(squares[i]));
+  }
 
-  int results[] = {
-      3,
-      1,
-  };
   uint32_t magics[SIZE * SIZE] = {0ul};
 
   printf("static const uint32_t kMagics[] = {\n");
-  for (int square = 0; square < SIZE * SIZE; square++) {
-    magics[square] = find_magic(square, BITS, 1);
-    printf("  0x%xul,\n", magics[square]);
+  for (int sq = 0; sq < SIZE * SIZE; sq++) {
+    magics[sq] = find_magic(sq, BITS);
+    printf("  0x%xul,\n", magics[sq]);
   }
   printf("};\n\n");
 
-  for (int i = 0, n = ARRAY_SIZE(tests); i < n; i++) {
+  for (int i = 0; i < NUM_TESTS; i++) {
     int sq = squares[i];
-    if (magics[sq] == 0ul) continue;
-    uint32_t test = ~tests[i] & COLUMNS[sq / SIZE];
-    test ^= 1ul << sq;
-    uint32_t lookup = count[sq][transform(test, magics[sq], BITS)];
-    print_bb(tests[i], test, lookup);
-    int result = __builtin_popcount(lookup);
-    printf("expected: %i, actual %i\n", results[i], result);
+    int result = count[sq][transform(~tests[i] & rmask(sq), magics[sq], BITS)];
+    if (results[i] != result) {
+      printf("expected: %i, actual %i\n", results[i], result);
+    }
   }
 
   return 0;

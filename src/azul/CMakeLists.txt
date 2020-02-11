@@ -1,6 +1,10 @@
 add_library (azul STATIC)
 add_executable (magics magics.cc)
 
+target_link_options (magics PUBLIC
+  -flto
+)
+
 target_sources (azul PRIVATE
   center.cc
   board.cc
