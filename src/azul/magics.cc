@@ -2,8 +2,6 @@
 #include "board.h"
 
 #include <glog/logging.h>
-
-#include <iostream>
 #include <vector>
 
 // magics for 8 bit table, found using find_magics.cc

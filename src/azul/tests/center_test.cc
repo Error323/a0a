@@ -72,8 +72,8 @@ TEST(CenterTest, CenterFromString) {
   c.CenterFromString("00_12_3344001111__2201234__________");
   EXPECT_EQ(3, c.Count(Position::FAC2));
   EXPECT_EQ(5, c.Count(Position::CENTER));
-  EXPECT_EQ(0, c.Count(Position::FAC4, Tile::YELLOW));
-  EXPECT_EQ(4, c.Count(Position::FAC4, Tile::WHITE));
+  EXPECT_EQ(4, c.Count(Position::FAC4, Tile::YELLOW));
+  EXPECT_EQ(0, c.Count(Position::FAC4, Tile::WHITE));
   EXPECT_EQ(1, c.Count(Position::CENTER, Tile::RED));
 }
 
@@ -82,7 +82,7 @@ TEST(CenterTest, TakeTiles) {
   c.CenterFromString("00_12_3344001111__2201231334_______");
   EXPECT_EQ(2, c.TakeTiles(Position::FAC1, Tile::BLUE));
   EXPECT_EQ(9, c.Count(Position::CENTER));
-  EXPECT_EQ(3, c.TakeTiles(Position::CENTER, Tile::RED));
+  EXPECT_EQ(3, c.TakeTiles(Position::CENTER, Tile::BLACK));
   EXPECT_EQ(6, c.Count(Position::CENTER));
 }
 
@@ -93,6 +93,6 @@ TEST(CenterTest, IsRoundOver) {
   EXPECT_TRUE(c.IsRoundOver());
   c.CenterFromString("____________________111____________");
   EXPECT_FALSE(c.IsRoundOver());
-  c.TakeTiles(Position::CENTER, Tile::WHITE);
+  c.TakeTiles(Position::CENTER, Tile::YELLOW);
   EXPECT_TRUE(c.IsRoundOver());
 }

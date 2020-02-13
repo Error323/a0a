@@ -22,7 +22,6 @@ class Board {
   void IncreaseFloorline();
   void NextRound();
   void Reset();
-  void UpdateScore(int row, int col, int tile);
   int16_t Score();
   bool IsTerminal() { return terminal_; }
 
@@ -37,4 +36,6 @@ class Board {
   int16_t score_;
   uint8_t floor_line_;
   bool terminal_;
+
+  void UpdateScore(int row, int col, int tile);
 };

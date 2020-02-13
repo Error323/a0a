@@ -1,5 +1,4 @@
 #include <gtest/gtest.h>
-#include <iostream>
 
 #include "azul/board.h"
 #include "azul/constants.h"
