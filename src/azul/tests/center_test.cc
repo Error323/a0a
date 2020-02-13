@@ -1,7 +1,7 @@
 #include <gtest/gtest.h>
 #include <iostream>
 
-#include "azul/center.cc"
+#include "azul/center.h"
 #include "azul/constants.h"
 
 TEST(BagTest, Pop) {

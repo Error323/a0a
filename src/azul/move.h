@@ -5,16 +5,16 @@
 #include "constants.h"
 
 class Move {
-public:
+ public:
   Move(uint8_t index);
-  Move(uint8_t factory, Tile tile, uint8_t line);
+  Move(Position factory, Tile tile, Line line);
 
   uint8_t index_;
   uint8_t factory_;
   uint8_t line_;
   Tile tile_type_;
 
-private:
+ private:
   void Compose();
   void Decompose();
 };

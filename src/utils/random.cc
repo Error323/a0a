@@ -26,7 +26,6 @@
 */
 
 #include "random.h"
-#include <random>
 
 namespace utils {
 
@@ -43,6 +42,11 @@ int Random::GetInt(int min, int max) {
 }
 
 bool Random::GetBool() { return GetInt(0, 1) != 0; }
+
+uint32_t Random::GetFewBits32() {
+  std::uniform_int_distribution<uint32_t> dist;
+  return dist(gen_) & dist(gen_);
+}
 
 double Random::GetDouble(double maxval) {
   std::uniform_real_distribution<> dist(0.0, maxval);

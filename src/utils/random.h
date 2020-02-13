@@ -27,6 +27,7 @@
 
 #pragma once
 
+#include <stdint.h>
 #include <random>
 #include <string>
 
@@ -40,6 +41,7 @@ class Random {
   double GetGamma(double alpha, double beta);
   // Both sides are included.
   int GetInt(int min, int max);
+  uint32_t GetFewBits32();
   std::string GetString(int length);
   bool GetBool();
 

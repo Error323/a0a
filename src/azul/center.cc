@@ -1,11 +1,11 @@
+#include "center.h"
+#include "utils/random.h"
+
 #include <glog/logging.h>
 #include <algorithm>
 #include <bitset>
 #include <iostream>
 #include <sstream>
-
-#include "center.h"
-#include "utils/random.h"
 
 // ============================================================================
 // Bag class

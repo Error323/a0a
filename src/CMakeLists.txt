@@ -13,5 +13,6 @@ target_link_libraries (a0a
   ${GFLAGS_LIBRARIES}
   ${GLOG_LIBRARIES}
   ${CUDNN_LIBRARIES}
+  azul
 )
 

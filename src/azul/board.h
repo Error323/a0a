@@ -9,6 +9,12 @@ class Board {
  public:
   static const int SIZE = 5;
 
+  // masks for columns
+  static constexpr uint32_t kColumns[] = {0x108421, 0x210842, 0x421084,
+                                          0x842108, 0x1084210};
+  // masks for rows
+  static constexpr uint32_t kRows[] = {0x1f, 0x3e0, 0x7c00, 0xf8000, 0x1f00000};
+
   Board();
 
   // always assumes a legal move
@@ -31,6 +37,4 @@ class Board {
   int16_t score_;
   uint8_t floor_line_;
   bool terminal_;
-
-  uint32_t Lookup(int row, int col);
 };

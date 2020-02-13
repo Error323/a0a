@@ -1,14 +1,11 @@
 #include "move.h"
+#include <iostream>
 
-Move::Move(uint8_t index): index_(index) {
+Move::Move(uint8_t index) : index_(index) { Decompose(); }
+
+Move::Move(Position factory, Tile tile, Line line)
+    : factory_(factory), line_(line), tile_type_(tile) {
   Compose();
-}
-
-Move::Move(uint8_t factory, Tile tile, uint8_t line):
-  factory_(factory),
-  line_(line),
-  tile_type_(tile) {
-  Decompose();
 }
 
 void Move::Compose() {
