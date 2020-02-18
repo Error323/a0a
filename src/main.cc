@@ -16,10 +16,11 @@ int main(int argc, char **argv) {
   ::google::InstallFailureSignalHandler();
 
   InitScoreTable();
-  Board b;
-  b.ApplyMove(Move(2), 3);
-  b.NextRound();
-  VLOG(1) << b.Score();
+  Bag bag;
+  Board board(bag);
+  board.ApplyMove(Move(2), 3);
+  board.NextRound();
+  VLOG(1) << board.Score();
 
   ::google::ShutDownCommandLineFlags();
   ::google::ShutdownGoogleLogging();

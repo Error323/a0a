@@ -4,6 +4,9 @@
 #include <glog/logging.h>
 #include <vector>
 
+// nof bits used per square entry
+static const int kMagicBits = 8;
+
 // magics for 8 bit table, found using find_magics.cc
 static const uint32_t kMagics[] = {
     0x401041aul,  0x7c23192ul,  0x8044180ul,  0x18032080ul, 0x8091009ul,

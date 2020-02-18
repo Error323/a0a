@@ -10,18 +10,19 @@
 // ============================================================================
 // Bag class
 // ============================================================================
-Bag::Bag() : size_(0) {}
+Bag::Bag() : size_(0) { Reset(); }
 
 void Bag::Reset() {
   for (int i = 0; i < NUM_TILES; i++) {
     tiles[i] = BAG_SIZE / NUM_TILES;
+    returned_[i] = 0;
   }
   size_ = BAG_SIZE;
 }
 
 Tile Bag::Pop() {
   if (size_ == 0) {
-    Reset();
+    ReShuffle();
   }
 
   float r = utils::Random::Get().GetFloat(1.0f);
@@ -40,6 +41,17 @@ Tile Bag::Pop() {
   size_--;
   return Tile(NUM_TILES - 1);
 }
+
+void Bag::ReShuffle() {
+  size_ = 0;
+  for (int i = 0; i < NUM_TILES; i++) {
+    tiles[i] += returned_[i];
+    size_ += tiles[i];
+    returned_[i] = 0;
+  }
+}
+
+void Bag::Return(Tile tile, int num) { returned_[tile] += num; }
 
 // ============================================================================
 // Holder class
@@ -77,7 +89,7 @@ int Holder::Count() {
 // ============================================================================
 // Center class
 // ============================================================================
-Center::Center() { Reset(); }
+Center::Center(Bag &bag) : bag_(bag) { Reset(); }
 
 std::string Center::DebugStr() {
   std::stringstream ss;
@@ -118,9 +130,11 @@ void Center::Clear() {
   for (int i = 0; i < NUM_FACTORIES + 1; i++) {
     center_[i].Clear();
   }
+  first = -1;
 }
 
 void Center::Reset() {
+  first = -1;
   for (int i = 0; i < NUM_FACTORIES; i++) {
     for (int j = 0; j < NUM_TILES_PER_FACTORY; j++) {
       Tile t = bag_.Pop();

@@ -24,3 +24,5 @@ enum Position { FAC1, FAC2, FAC3, FAC4, FAC5, CENTER, NUM_POS };
 /* part of an action or move */
 enum Line { LINE1, LINE2, LINE3, LINE4, LINE5, FLOORLINE, NUM_LINES };
 
+/* maximum number of moves */
+static const int kNumMoves = NUM_POS * NUM_TILES * NUM_LINES;

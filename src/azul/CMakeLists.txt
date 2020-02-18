@@ -5,6 +5,7 @@ target_sources (azul PRIVATE
   board.cc
   move.cc
   magics.cc
+  state.cc
 )
 
 target_include_directories (azul PUBLIC
@@ -20,9 +21,5 @@ target_link_libraries (azul
   ${GLOG_LIBRARIES}
   utils
 )
-
-add_executable (find_magics find_magics.cc)
-target_link_libraries (find_magics azul)
-  
 
 add_subdirectory (tests)

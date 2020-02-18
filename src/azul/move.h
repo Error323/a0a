@@ -9,10 +9,10 @@ class Move {
   Move(uint8_t index);
   Move(Position factory, Tile tile, Line line);
 
-  uint8_t index_;
-  uint8_t factory_;
-  uint8_t line_;
-  Tile tile_type_;
+  uint8_t id;
+  uint8_t factory;
+  uint8_t line;
+  Tile tile_type;
 
  private:
   void Compose();

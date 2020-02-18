@@ -12,13 +12,23 @@ class Bag {
   static const int BAG_SIZE = 100;
 
   Bag();
+  // full bag reset, restores bag to full size (100)
   void Reset();
+
+  // puts the returned tiles back into the bag
+  void ReShuffle();
+
+  // adds tiles to the return pile
+  void Return(Tile tile, int num);
+
+  // get a random tile from the bag
   Tile Pop();
 
   uint8_t tiles[NUM_TILES];
 
  private:
   uint8_t size_;
+  uint8_t returned_[NUM_TILES];
 };
 
 class Holder {
@@ -44,10 +54,13 @@ class Center {
   static const int NUM_FACTORIES = 5;
   /* tiles a single factory can hold maximum */
   static const int NUM_TILES_PER_FACTORY = 4;
-  /* maximum center tiles: 4*5 - 5 + 1 */
+  /* maximum center tiles: 4*5 - 5 */
   static const int NUM_CENTER = (NUM_TILES_PER_FACTORY - 1) * NUM_FACTORIES;
 
-  Center();
+  /* first tile belongs to {-1, 0, 1} (none, player 0, player 1) */
+  int first{-1};
+
+  Center(Bag &bag);
 
   std::string DebugStr();
   void CenterFromString(const std::string center);
@@ -62,5 +75,5 @@ class Center {
 
  private:
   Holder center_[NUM_POS];
-  Bag bag_;
+  Bag &bag_;
 };

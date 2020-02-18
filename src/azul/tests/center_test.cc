@@ -7,19 +7,15 @@
 TEST(BagTest, Pop) {
   Bag bag;
   for (int n = 0; n < 3; n++) {
-    int count[NUM_TILES] = {0};
     for (int i = 0; i < Bag::BAG_SIZE; i++) {
-      Tile tile = bag.Pop();
-      count[tile]++;
+      bag.Pop();
       int sum = 0;
       for (int j = 0; j < Tile::NUM_TILES; j++) {
         sum += bag.tiles[j];
       }
       EXPECT_EQ(sum, Bag::BAG_SIZE - i - 1);
     }
-    for (int i = 0; i < NUM_TILES; i++) {
-      EXPECT_EQ(Bag::BAG_SIZE / NUM_TILES, count[i]);
-    }
+    bag.Reset();
   }
 }
 
@@ -49,7 +45,8 @@ TEST(HolderTest, Take) {
 }
 
 TEST(CenterTest, AddTile) {
-  Center c;
+  Bag b;
+  Center c(b);
   c.Clear();
 
   c.AddTile(Tile::YELLOW, Position::FAC2, 2);
@@ -68,7 +65,8 @@ TEST(CenterTest, AddTile) {
 }
 
 TEST(CenterTest, CenterFromString) {
-  Center c;
+  Bag b;
+  Center c(b);
   c.CenterFromString("00_12_3344001111__2201234__________");
   EXPECT_EQ(3, c.Count(Position::FAC2));
   EXPECT_EQ(5, c.Count(Position::CENTER));
@@ -78,7 +76,8 @@ TEST(CenterTest, CenterFromString) {
 }
 
 TEST(CenterTest, TakeTiles) {
-  Center c;
+  Bag b;
+  Center c(b);
   c.CenterFromString("00_12_3344001111__2201231334_______");
   EXPECT_EQ(2, c.TakeTiles(Position::FAC1, Tile::BLUE));
   EXPECT_EQ(9, c.Count(Position::CENTER));
@@ -87,7 +86,8 @@ TEST(CenterTest, TakeTiles) {
 }
 
 TEST(CenterTest, IsRoundOver) {
-  Center c;
+  Bag b;
+  Center c(b);
   EXPECT_FALSE(c.IsRoundOver());
   c.Clear();
   EXPECT_TRUE(c.IsRoundOver());
