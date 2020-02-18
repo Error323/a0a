@@ -10,11 +10,14 @@ int State::LegalMoves(MoveList &moves) {
     for (int tile = 0; tile < NUM_TILES; tile++) {
       int num = center_.Count(Position(pos), Tile(tile));
       if (num > 0) {
-        for (int line = 0; line < NUM_LINES; line++) {
-          Move &m = moves[i];
+        for (int line = 0; line < NUM_LINES - 1; line++) {
+          // if there's space on the left
           if (b.left[line].count < line + 1) {
+            // if the left is empty or the tiles are of the current type
             if (b.left[line].tile_type == tile || b.left[line].count == 0) {
+              // if the wall doesn't have the current tile yet
               if (!b.WallHasTile(Tile(tile), Line(line))) {
+                Move &m = moves[i];
                 m.factory = pos;
                 m.tile_type = Tile(tile);
                 m.line = line;
@@ -23,6 +26,13 @@ int State::LegalMoves(MoveList &moves) {
             }
           }
         }
+
+        // we can always add tiles to the floorline
+        Move &m = moves[i];
+        m.factory = pos;
+        m.tile_type = Tile(tile);
+        m.line = FLOORLINE;
+        i++;
       }
     }
   }

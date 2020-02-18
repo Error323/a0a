@@ -6,6 +6,7 @@
 
 class Move {
  public:
+  Move() : id(0), factory(0), line(0), tile_type(BLUE) {}
   Move(uint8_t index);
   Move(Position factory, Tile tile, Line line);
 

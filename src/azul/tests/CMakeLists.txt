@@ -1,4 +1,4 @@
-set (tests center board)
+set (tests center board state)
 
 foreach (test ${tests})
   set (name ${test}_test)
