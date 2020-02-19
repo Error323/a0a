@@ -18,9 +18,10 @@ int State::LegalMoves(MoveList &moves) {
               // if the wall doesn't have the current tile yet
               if (!b.WallHasTile(Tile(tile), Line(line))) {
                 Move &m = moves[i];
-                m.factory = pos;
+                m.factory = Position(pos);
                 m.tile_type = Tile(tile);
-                m.line = line;
+                m.line = Line(line);
+                m.Compose();
                 i++;
               }
             }
@@ -29,15 +30,21 @@ int State::LegalMoves(MoveList &moves) {
 
         // we can always add tiles to the floorline
         Move &m = moves[i];
-        m.factory = pos;
+        m.factory = Position(pos);
         m.tile_type = Tile(tile);
         m.line = FLOORLINE;
+        m.Compose();
         i++;
       }
     }
   }
 
   return i;
+}
+
+void State::FromString(const std::string center) {
+  Reset();
+  center_.CenterFromString(center);
 }
 
 void State::Reset() {
@@ -70,7 +77,24 @@ void State::Step(const Move move) {
 
 std::string State::Serialize() { return ""; }
 
-void State::MakePlanes(std::vector<float> &planes) {}
+void State::MakePlanes(std::vector<float> &planes) {
+// 1 + 1 + 5 + 5*4 + 16 + 1 + 2 + 7 + 2 + 7 = 62
+// |   |   |   |     |    |   |   |   |   |
+// |   |   |   |     |    |   |   |   |   them floor: v in {0,...,6}
+// |   |   |   |     |    |   |   |   them board: v in {0,...,5}
+// |   |   |   |     |    |   |   us floor: v in {0,...,6}
+// |   |   |   |     |    |   us board: v in {0,...,5}
+// |   |   |   |     |    us 1st tile: v in {0, 1}
+// |   |   |   |     center: v in {0,...,6}
+// |   |   |   factories: v in {0,...,5}
+// |   |   bag: v in {0,...,20}
+// |   them score: v in {0,...,255}
+// us score: v in {0,...,255}
+//
+// 8 + 8 + 5*5 + 5*4*3 + 16*3 + 1 + 2*(5*5*3 + 7*3 + 15*3) = 432 bit = 54 bytes
+
+
+}
 
 int State::Outcome() {
   int me = boards_[turn_].Score();
@@ -82,4 +106,20 @@ int State::Outcome() {
 
 bool State::IsTerminal() {
   return boards_[0].IsTerminal() || boards_[1].IsTerminal();
+}
+State &State::operator=(const State &s) {
+  if (this == &s) {
+    return *this;
+  }
+
+  bag_ = s.bag_;
+  center_ = s.center_;
+  center_.SetBag(bag_);
+  boards_[0] = s.boards_[0];
+  boards_[0].SetBag(bag_);
+  boards_[1] = s.boards_[1];
+  boards_[1].SetBag(bag_);
+  turn_ = s.turn_;
+
+  return *this;
 }

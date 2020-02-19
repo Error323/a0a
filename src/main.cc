@@ -1,8 +1,29 @@
 #include <glog/logging.h>
+#include <vector>
 
-#include "azul/board.h"
 #include "azul/magics.h"
+#include "azul/state.h"
 #include "version.h"
+
+
+uint64_t perft(State state, std::vector<State> &states, int depth) {
+  if (depth == 0 || state.IsTerminal()) {
+    return 1;
+  }
+
+  MoveList moves;
+  int n = state.LegalMoves(moves);
+  uint64_t nodes = 0;
+
+  states[depth] = state;
+  for (int i = 0; i < n; i++) {
+    state.Step(moves[i]);
+    nodes += perft(state, states, depth - 1);
+    state = states[depth];
+  }
+
+  return nodes;
+}
 
 int main(int argc, char **argv) {
   ::google::SetVersionString(VERSION);
@@ -16,11 +37,14 @@ int main(int argc, char **argv) {
   ::google::InstallFailureSignalHandler();
 
   InitScoreTable();
-  Bag bag;
-  Board board(bag);
-  board.ApplyMove(Move(2), 3);
-  board.NextRound();
-  VLOG(1) << board.Score();
+  State state;
+  int depth = 6;
+  std::vector<State> states(depth);
+
+  for (int i = 0; i < depth; i++) {
+    uint64_t nodes = perft(state, states, i);
+    VLOG(1) << "perft(" << i << ") = " << nodes;
+  }
 
   ::google::ShutDownCommandLineFlags();
   ::google::ShutdownGoogleLogging();

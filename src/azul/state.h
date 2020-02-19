@@ -18,6 +18,8 @@ class State {
   void MakePlanes(std::vector<float> &planes);
   void Reset();
   void Step(const Move move);
+  void FromString(const std::string center);
+  State &operator=(const State &s);
   std::string Serialize();
   int Outcome();
   bool IsTerminal();

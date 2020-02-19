@@ -23,6 +23,7 @@ class Board {
   void IncreaseFloorline();
   void NextRound();
   void Reset();
+  void SetBag(Bag &bag) {bag_ = &bag;}
   int16_t Score();
   bool IsTerminal() { return terminal_; }
   bool WallHasTile(Tile tile, Line line);
@@ -37,7 +38,7 @@ class Board {
   int16_t score_;
   uint8_t floor_line_;
   bool terminal_;
-  Bag &bag_;
+  Bag *bag_;
 
   void UpdateScore(int row, int col, int tile);
 };

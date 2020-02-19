@@ -67,6 +67,7 @@ class Center {
   void Reset();
   bool IsRoundOver();
   void Clear();
+  void SetBag(Bag &bag) {bag_ = &bag;}
   int Count(Position pos);
   int Count(Position pos, Tile tile);
   // assume we can always add tiles to the center legally
@@ -75,5 +76,5 @@ class Center {
 
  private:
   Holder center_[NUM_POS];
-  Bag &bag_;
+  Bag *bag_;
 };

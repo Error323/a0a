@@ -89,7 +89,7 @@ int Holder::Count() {
 // ============================================================================
 // Center class
 // ============================================================================
-Center::Center(Bag &bag) : bag_(bag) { Reset(); }
+Center::Center(Bag &bag) : bag_(&bag) { Reset(); }
 
 std::string Center::DebugStr() {
   std::stringstream ss;
@@ -137,7 +137,7 @@ void Center::Reset() {
   first = -1;
   for (int i = 0; i < NUM_FACTORIES; i++) {
     for (int j = 0; j < NUM_TILES_PER_FACTORY; j++) {
-      Tile t = bag_.Pop();
+      Tile t = bag_->Pop();
       center_[i].Add(t);
     }
   }

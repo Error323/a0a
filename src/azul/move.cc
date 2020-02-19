@@ -13,7 +13,7 @@ void Move::Compose() {
 }
 
 void Move::Decompose() {
-  factory = id / (NUM_TILES * NUM_POS);
+  factory = Position(id / (NUM_TILES * NUM_POS));
   tile_type = Tile((id - factory * NUM_TILES * NUM_POS) / NUM_POS);
-  line = id % NUM_POS;
+  line = Line(id % NUM_POS);
 }

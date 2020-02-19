@@ -14,5 +14,7 @@ target_link_libraries (a0a
   ${GLOG_LIBRARIES}
   ${CUDNN_LIBRARIES}
   azul
+  profiler
 )
 
+target_link_options (a0a PRIVATE -flto)
