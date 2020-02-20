@@ -176,3 +176,11 @@ int Center::Count(Position pos, Tile tile) { return center_[pos].Count(tile); }
 
 int Center::Count(Position pos) { return center_[pos].Count(); }
 
+void Center::NextRound() {
+  for (int i = 0; i < NUM_FACTORIES; i++) {
+    for (int j = 0; j < NUM_TILES_PER_FACTORY; j++) {
+      Tile t = bag_->Pop();
+      center_[i].Add(t);
+    }
+  }
+}

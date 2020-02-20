@@ -2,7 +2,7 @@
 
 #include <stdint.h>
 #include <array>
-#include <string>
+#include <vector>
 
 #include "board.h"
 #include "center.h"
@@ -20,7 +20,7 @@ class State {
   void Step(const Move move);
   void FromString(const std::string center);
   State &operator=(const State &s);
-  std::string Serialize();
+  std::vector<uint8_t> Serialize();
   int Outcome();
   bool IsTerminal();
 

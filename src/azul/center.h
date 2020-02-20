@@ -65,6 +65,7 @@ class Center {
   std::string DebugStr();
   void CenterFromString(const std::string center);
   void Reset();
+  void NextRound();
   bool IsRoundOver();
   void Clear();
   void SetBag(Bag &bag) {bag_ = &bag;}

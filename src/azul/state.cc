@@ -67,6 +67,7 @@ void State::Step(const Move move) {
   if (center_.IsRoundOver()) {
     boards_[0].NextRound();
     boards_[1].NextRound();
+    center_.NextRound();
     // It's theoretically possible to have no tiles in the center the entire
     // round. When each factory has 4 tiles of the same type.
     turn_ = center_.first == -1 ? 0 : center_.first;
@@ -75,38 +76,42 @@ void State::Step(const Move move) {
   }
 }
 
-std::string State::Serialize() { return ""; }
+std::vector<uint8_t> State::Serialize() {
+  std::vector<uint8_t> data;
+  return data;
+}
 
 void State::MakePlanes(std::vector<float> &planes) {
-// 1 + 1 + 5 + 5*4 + 16 + 1 + 2 + 7 + 2 + 7 = 62
-// |   |   |   |     |    |   |   |   |   |
-// |   |   |   |     |    |   |   |   |   them floor: v in {0,...,6}
-// |   |   |   |     |    |   |   |   them board: v in {0,...,5}
-// |   |   |   |     |    |   |   us floor: v in {0,...,6}
-// |   |   |   |     |    |   us board: v in {0,...,5}
-// |   |   |   |     |    us 1st tile: v in {0, 1}
-// |   |   |   |     center: v in {0,...,6}
-// |   |   |   factories: v in {0,...,5}
-// |   |   bag: v in {0,...,20}
-// |   them score: v in {0,...,255}
-// us score: v in {0,...,255}
-//
-// 8 + 8 + 5*5 + 5*4*3 + 16*3 + 1 + 2*(5*5*3 + 7*3 + 15*3) = 432 bit = 54 bytes
-
-
+  // 1 + 1 + 5 + 5*4 + 16 + 1 + 1 + 1 + 1 + 1 + 1 + 1 = 50
+  // |   |   |   |     |    |   |   |   |   |   |   |
+  // |   |   |   |     |    |   |   |   |   |   |   them floor: v in {0,...,7}
+  // |   |   |   |     |    |   |   |   |   |   them wall: v in {0, 1}
+  // |   |   |   |     |    |   |   |   |   them left: v in {0,...,5}
+  // |   |   |   |     |    |   |   |   us floor: v in {0,...,7}
+  // |   |   |   |     |    |   |   us wall: v in {0, 1}
+  // |   |   |   |     |    |   us left: v in {0,...,5}
+  // |   |   |   |     |    1st tile: v in {-1, 0, 1}
+  // |   |   |   |     center: v in {0,...,5}
+  // |   |   |   factories: v in {0,...,5}
+  // |   |   bag: v in {0,...,20}
+  // |   them score: v in {0,...,255}
+  // us score: v in {0,...,255}
+  planes.resize(50 * Board::SIZE * Board::SIZE);
 }
 
 int State::Outcome() {
-  int me = boards_[turn_].Score();
-  int op = boards_[1 ^ turn_].Score();
-  if (me > op) return 1;
-  if (me < op) return -1;
+  // from the pov of the first player
+  int p1 = boards_[0].Score();
+  int p2 = boards_[1].Score();
+  if (p1 > p2) return 1;
+  if (p1 < p2) return -1;
   return 0;
 }
 
 bool State::IsTerminal() {
   return boards_[0].IsTerminal() || boards_[1].IsTerminal();
 }
+
 State &State::operator=(const State &s) {
   if (this == &s) {
     return *this;
