@@ -42,10 +42,7 @@ class Holder {
   void Clear();
 
  private:
-  static const int NBITS = 4;
-  static const int MAX = (1 << NBITS) - 1;
-  // 4 bits per type, total: 20 bit
-  uint32_t counts_;
+  uint8_t counts_[NUM_TILES];
 };
 
 class Center {

@@ -25,12 +25,12 @@ Tile Bag::Pop() {
     ReShuffle();
   }
 
-  float r = utils::Random::Get().GetFloat(1.0f);
+  int r = utils::Random::Get().GetInt(0, size_ - 1);
   int sum = 0;
   // roulette wheel selection of a tile
   for (int i = 0; i < NUM_TILES - 1; i++) {
     sum += tiles[i];
-    if (r < (sum / float(size_))) {
+    if (r < sum) {
       tiles[i]--;
       size_--;
       return Tile(i);
@@ -56,32 +56,27 @@ void Bag::Return(Tile tile, int num) { returned_[tile] += num; }
 // ============================================================================
 // Holder class
 // ============================================================================
-Holder::Holder() : counts_(0) {}
+Holder::Holder() { Clear(); }
 
 int Holder::Add(Tile tile, int num) {
-  int current = Count(tile);
-  num += current;
-  uint32_t mask = MAX << (tile * NBITS);
-  counts_ &= ~mask;
-  counts_ |= num << (tile * NBITS);
-  return num;
+  counts_[tile] += num;
+  return counts_[tile];
 }
 
 int Holder::Take(Tile tile) {
-  uint32_t mask = MAX << (tile * NBITS);
   int num = Count(tile);
-  counts_ &= ~mask;
+  counts_[tile] = 0;
   return num;
 }
 
-void Holder::Clear() { counts_ = 0; }
+void Holder::Clear() { for (int i = 0; i < NUM_TILES; i++) counts_[i] = 0; }
 
-int Holder::Count(Tile tile) { return (counts_ >> (tile * NBITS)) & MAX; }
+int Holder::Count(Tile tile) { return counts_[tile]; }
 
 int Holder::Count() {
   int sum = 0;
   for (int i = 0; i < NUM_TILES; i++) {
-    sum += Count(Tile(i));
+    sum += counts_[i];
   }
   return sum;
 }
