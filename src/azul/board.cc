@@ -15,7 +15,7 @@ static const int kBonusCol = 7;
 static const int kBonusRow = 2;
 
 Board::Board(Bag &bag)
-    : wall(0), score_(0), floor_line_(0), terminal_(false), bag_(&bag) {
+    : wall(0), floorline(0), score_(0), terminal_(false), bag_(&bag) {
   Reset();
 }
 
@@ -25,7 +25,7 @@ void Board::Reset() {
   }
   wall = 0;
   score_ = 0;
-  floor_line_ = 0;
+  floorline = 0;
   terminal_ = false;
 }
 
@@ -43,12 +43,12 @@ void Board::ApplyMove(Move move, int num_tiles) {
   }
 
   // put remaining tiles on the floorline
-  floor_line_ += num_tiles;
+  floorline += num_tiles;
   // update bag statistics
   bag_->Return(Tile(move.tile_type), num_tiles);
 }
 
-void Board::IncreaseFloorline() { floor_line_++; }
+void Board::IncreaseFloorline() { floorline++; }
 
 void Board::UpdateScore(int row, int col, int tile) {
   // NOTE: Uses magic bitboards to determine row + column score
@@ -92,9 +92,9 @@ void Board::NextRound() {
   }
 
   // 4. update floor line
-  score_ -= kPenalty[std::min(int(floor_line_), kFloorLineSize)];
+  score_ -= kPenalty[std::min(int(floorline), kFloorLineSize)];
   score_ = std::max(0, int(score_));
-  floor_line_ = 0;
+  floorline = 0;
 }
 
-int16_t Board::Score() { return score_; }
+uint8_t Board::Score() const { return static_cast<uint8_t>(score_); }

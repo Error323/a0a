@@ -1,5 +1,9 @@
 #include "state.h"
 
+#include <glog/logging.h>
+
+#include <sstream>
+
 State::State() : center_(bag_), boards_{bag_, bag_} { Reset(); }
 
 int State::LegalMoves(MoveList &moves) {
@@ -21,7 +25,6 @@ int State::LegalMoves(MoveList &moves) {
                 m.factory = Position(pos);
                 m.tile_type = Tile(tile);
                 m.line = Line(line);
-                m.Compose();
                 i++;
               }
             }
@@ -33,7 +36,6 @@ int State::LegalMoves(MoveList &moves) {
         m.factory = Position(pos);
         m.tile_type = Tile(tile);
         m.line = FLOORLINE;
-        m.Compose();
         i++;
       }
     }
@@ -72,31 +74,45 @@ void State::Step(const Move move) {
     // round. When each factory has 4 tiles of the same type.
     turn_ = center_.first == -1 ? 0 : center_.first;
   } else {
-    turn_ ^= 1;
+    turn_ ^= 1u;
   }
 }
 
-std::vector<uint8_t> State::Serialize() {
-  std::vector<uint8_t> data;
-  return data;
+std::string State::Serialize() const {
+  std::stringstream ss;
+  uint8_t s;
+  // turn 1 byte
+  ss.write(reinterpret_cast<const char*>(&turn_), 1);
+
+  // scores 2 bytes
+  s = boards_[0].Score();
+  ss.write(reinterpret_cast<char *>(&s), sizeof(s));
+  s = boards_[1].Score();
+  ss.write(reinterpret_cast<char *>(&s), sizeof(s));
+
+  // bag 5 bytes
+  ss.write(reinterpret_cast<const char *>(&bag_.tiles), sizeof(bag_.tiles));
+
+  // factories + center 6*5 bytes
+  ss.write(reinterpret_cast<const char *>(&center_.holders), sizeof(center_.holders));
+
+  // first tile 1 byte
+  ss.write(reinterpret_cast<const char *>(&center_.first), 1);
+
+  for (int p = 0; p <= 1; p++) {
+    // left 5*2 bytes
+    ss.write(reinterpret_cast<const char *>(&boards_[p].left), sizeof(boards_[p].left));
+    // floorline 1 byte
+    ss.write(reinterpret_cast<const char *>(&boards_[p].floorline), 1);
+    // wall 4 bytes
+    ss.write(reinterpret_cast<const char *>(&boards_[p].wall), sizeof(boards_[p].wall));
+  }
+
+  return ss.str();
 }
 
 void State::MakePlanes(std::vector<float> &planes) {
-  // 1 + 1 + 5 + 5*4 + 16 + 1 + 1 + 1 + 1 + 1 + 1 + 1 = 50
-  // |   |   |   |     |    |   |   |   |   |   |   |
-  // |   |   |   |     |    |   |   |   |   |   |   them floor: v in {0,...,7}
-  // |   |   |   |     |    |   |   |   |   |   them wall: v in {0, 1}
-  // |   |   |   |     |    |   |   |   |   them left: v in {0,...,5}
-  // |   |   |   |     |    |   |   |   us floor: v in {0,...,7}
-  // |   |   |   |     |    |   |   us wall: v in {0, 1}
-  // |   |   |   |     |    |   us left: v in {0,...,5}
-  // |   |   |   |     |    1st tile: v in {-1, 0, 1}
-  // |   |   |   |     center: v in {0,...,5}
-  // |   |   |   factories: v in {0,...,5}
-  // |   |   bag: v in {0,...,20}
-  // |   them score: v in {0,...,255}
-  // us score: v in {0,...,255}
-  planes.resize(50 * Board::SIZE * Board::SIZE);
+  planes.resize(kNumPlanes * Board::SIZE * Board::SIZE);
 }
 
 int State::Outcome() {

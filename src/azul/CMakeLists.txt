@@ -22,7 +22,8 @@ target_link_libraries (azul
   utils
 )
 
-add_executable(find_magics find_magics.cc)
-target_link_libraries(find_magics azul profiler)
+add_executable (find_magics find_magics.cc)
+target_link_libraries (find_magics azul profiler)
+target_link_options (find_magics PRIVATE -flto)
 
 add_subdirectory (tests)

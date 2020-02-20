@@ -3,6 +3,8 @@
 #include <stdint.h>
 #include <array>
 #include <vector>
+#include <string>
+#include <unordered_map>
 
 #include "board.h"
 #include "center.h"
@@ -13,6 +15,8 @@ using MoveList = std::array<Move, kNumMoves>;
 
 class State {
  public:
+  friend struct std::hash<State>;
+
   State();
   int LegalMoves(MoveList &moves);
   void MakePlanes(std::vector<float> &planes);
@@ -20,7 +24,7 @@ class State {
   void Step(const Move move);
   void FromString(const std::string center);
   State &operator=(const State &s);
-  std::vector<uint8_t> Serialize();
+  std::string Serialize() const;
   int Outcome();
   bool IsTerminal();
 
@@ -28,5 +32,14 @@ class State {
   Bag bag_;
   Center center_;
   std::array<Board, 2> boards_;
-  int turn_{0};
+  uint8_t turn_{0};
 };
+
+namespace std {
+template<>
+struct hash<State> {
+  std::size_t operator()(const State &state) const {
+    return std::hash<std::string>()(state.Serialize());
+  }
+};
+}

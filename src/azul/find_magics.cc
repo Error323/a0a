@@ -2,7 +2,6 @@
 #include <stdio.h>
 
 #include "magics.h"
-#include "utils/random.h"
 #include "board.h"
 
 int main(int argc, char **argv) {

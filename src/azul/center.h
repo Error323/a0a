@@ -40,8 +40,6 @@ class Holder {
   int Count();
   int Count(Tile tile);
   void Clear();
-
- private:
   uint8_t counts_[NUM_TILES];
 };
 
@@ -55,7 +53,7 @@ class Center {
   static const int NUM_CENTER = (NUM_TILES_PER_FACTORY - 1) * NUM_FACTORIES;
 
   /* first tile belongs to {-1, 0, 1} (none, player 0, player 1) */
-  int first{-1};
+  int8_t first{-1};
 
   Center(Bag &bag);
 
@@ -71,8 +69,8 @@ class Center {
   // assume we can always add tiles to the center legally
   void AddTile(Tile tile, Position pos, int num = 1);
   int TakeTiles(Position pos, Tile tile);
+  Holder holders[NUM_POS];
 
  private:
-  Holder center_[NUM_POS];
   Bag *bag_;
 };

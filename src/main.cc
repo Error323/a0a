@@ -1,5 +1,6 @@
 #include <glog/logging.h>
 
+#include <fstream>
 #include <vector>
 
 #include "azul/magics.h"
@@ -41,31 +42,22 @@ int main(int argc, char **argv) {
   MoveList moves;
   State state;
 
-  float avg_steps = 0.0f;
-  float avg_branch = 0.0f;
-  int N = 100000;
-  int outcome[3] = {0};
-  int stepdist[200] = {0};
+  int N = 1;
 
   for (int i = 0; i < N; i++) {
+    std::stringstream ss;
+    ss << "game-" << i << ".bin";
+    std::ofstream file(ss.str(), std::ofstream::binary);
     state.Reset();
-    int n, steps = 0;
+    file << state.Serialize();
+    int n;
     while (!state.IsTerminal()) {
       n = state.LegalMoves(moves);
-      avg_branch += n;
       n = utils::Random::Get().GetInt(0, n - 1);
       state.Step(moves[n]);
-      steps++;
+      file << state.Serialize();
+      VLOG(1) << std::hex << std::hash<State>()(state);
     }
-    stepdist[steps]++;
-    outcome[state.Outcome() + 1]++;
-    avg_steps += steps;
-  }
-
-  VLOG(1) << "Average steps: " << (avg_steps / N) << ", branch factor: " << (avg_branch / avg_steps);
-  VLOG(1) << "W/D/L " << outcome[2] << "/" << outcome[1] << "/" << outcome[0];
-  for (int i = 0; i < 200; i++) {
-    VLOG(1) << i << " " << stepdist[i];
   }
 
 /*  int depth = 6;

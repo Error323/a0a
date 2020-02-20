@@ -90,7 +90,7 @@ std::string Center::DebugStr() {
   std::stringstream ss;
   for (int i = 0; i < NUM_POS; i++) {
     for (int j = 0; j < NUM_TILES; j++) {
-      ss << center_[Position(i)].Count(Tile(j)) << " ";
+      ss << holders[Position(i)].Count(Tile(j)) << " ";
     }
     ss << std::endl;
   }
@@ -107,7 +107,7 @@ void Center::CenterFromString(const std::string center) {
     }
     Tile tile = Tile(center[i] - '0');
     Position pos = Position(i / NUM_TILES_PER_FACTORY);
-    center_[pos].Add(tile);
+    holders[pos].Add(tile);
   }
 
   // fill the center
@@ -117,13 +117,13 @@ void Center::CenterFromString(const std::string center) {
       continue;
     }
     Tile tile = Tile(center[n] - '0');
-    center_[CENTER].Add(tile);
+    holders[CENTER].Add(tile);
   }
 }
 
 void Center::Clear() {
   for (int i = 0; i < NUM_FACTORIES + 1; i++) {
-    center_[i].Clear();
+    holders[i].Clear();
   }
   first = -1;
 }
@@ -133,25 +133,25 @@ void Center::Reset() {
   for (int i = 0; i < NUM_FACTORIES; i++) {
     for (int j = 0; j < NUM_TILES_PER_FACTORY; j++) {
       Tile t = bag_->Pop();
-      center_[i].Add(t);
+      holders[i].Add(t);
     }
   }
 }
 
 void Center::AddTile(Tile tile, Position pos, int num) {
-  center_[pos].Add(tile, num);
+  holders[pos].Add(tile, num);
 }
 
 int Center::TakeTiles(Position pos, Tile tile) {
-  int num = center_[pos].Take(tile);
+  int num = holders[pos].Take(tile);
   if (pos != CENTER) {
     for (int i = 0; i < NUM_TILES; i++) {
       if (i == tile) {
         continue;
       }
       // move remaining tiles from the factory to the center
-      int n = center_[pos].Take(Tile(i));
-      center_[CENTER].Add(Tile(i), n);
+      int n = holders[pos].Take(Tile(i));
+      holders[CENTER].Add(Tile(i), n);
     }
   }
 
@@ -160,22 +160,22 @@ int Center::TakeTiles(Position pos, Tile tile) {
 
 bool Center::IsRoundOver() {
   for (int i = 0; i < NUM_POS; i++) {
-    if (center_[i].Count() > 0) {
+    if (holders[i].Count() > 0) {
       return false;
     }
   }
   return true;
 }
 
-int Center::Count(Position pos, Tile tile) { return center_[pos].Count(tile); }
+int Center::Count(Position pos, Tile tile) { return holders[pos].Count(tile); }
 
-int Center::Count(Position pos) { return center_[pos].Count(); }
+int Center::Count(Position pos) { return holders[pos].Count(); }
 
 void Center::NextRound() {
   for (int i = 0; i < NUM_FACTORIES; i++) {
     for (int j = 0; j < NUM_TILES_PER_FACTORY; j++) {
       Tile t = bag_->Pop();
-      center_[i].Add(t);
+      holders[i].Add(t);
     }
   }
 }

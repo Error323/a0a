@@ -24,19 +24,19 @@ class Board {
   void NextRound();
   void Reset();
   void SetBag(Bag &bag) {bag_ = &bag;}
-  int16_t Score();
+  uint8_t Score() const;
   bool IsTerminal() { return terminal_; }
   bool WallHasTile(Tile tile, Line line);
   struct LLine {
-    uint8_t tile_type : 4;
-    uint8_t count : 4;
+    uint8_t tile_type;
+    uint8_t count;
   };
   LLine left[SIZE];
   uint32_t wall;  ///< using 25 bit for the wall (1 bit per tile)
+  uint8_t floorline;
 
  private:
   int16_t score_;
-  uint8_t floor_line_;
   bool terminal_;
   Bag *bag_;
 
