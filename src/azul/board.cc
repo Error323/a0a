@@ -15,7 +15,7 @@ static const int kBonusCol = 7;
 static const int kBonusRow = 2;
 
 Board::Board(Bag &bag)
-    : wall(0), floorline(0), score_(0), terminal_(false), bag_(&bag) {
+    : wall(0), floorline(0), score_(0), terminal_(false), bag_(bag) {
   Reset();
 }
 
@@ -45,7 +45,7 @@ void Board::ApplyMove(Move move, int num_tiles) {
   // put remaining tiles on the floorline
   floorline += num_tiles;
   // update bag statistics
-  bag_->Return(Tile(move.tile_type), num_tiles);
+  bag_.Return(Tile(move.tile_type), num_tiles);
 }
 
 void Board::IncreaseFloorline() { floorline++; }
@@ -86,7 +86,7 @@ void Board::NextRound() {
       UpdateScore(i, j, left[i].tile_type);
 
       // update bag statistics
-      bag_->Return(Tile(left[i].tile_type), left[i].count - 1);
+      bag_.Return(Tile(left[i].tile_type), left[i].count - 1);
       left[i].count = 0;
     }
   }
@@ -98,3 +98,17 @@ void Board::NextRound() {
 }
 
 uint8_t Board::Score() const { return static_cast<uint8_t>(score_); }
+
+Board& Board::operator=(const Board& board) {
+  if (this == &board) {
+    return *this;
+  }
+
+  score_ = board.score_;
+  terminal_ = board.terminal_;
+  wall = board.wall;
+  floorline = board.floorline;
+  for (int i = 0; i < SIZE; i++) left[i] = board.left[i];
+
+  return *this;
+}

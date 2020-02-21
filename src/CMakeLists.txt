@@ -1,4 +1,5 @@
 add_subdirectory (azul)
+add_subdirectory (mcts)
 add_subdirectory (utils)
 
 add_executable (a0a
@@ -14,6 +15,7 @@ target_link_libraries (a0a
   ${GLOG_LIBRARIES}
   ${CUDNN_LIBRARIES}
   azul
+  mcts
   profiler
 )
 

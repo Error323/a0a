@@ -27,3 +27,5 @@ struct hash<Move> {
   }
 };
 }
+
+using MoveList = std::array<Move, kNumMoves>;

@@ -3,6 +3,7 @@
 #include <fstream>
 #include <vector>
 
+#include "mcts/mcts.h"
 #include "azul/magics.h"
 #include "azul/state.h"
 #include "utils/random.h"
@@ -42,31 +43,28 @@ int main(int argc, char **argv) {
   MoveList moves;
   State state;
 
-  int N = 1;
+  int N = 10;
+  MCTS mcts;
+  Policy pi;
+  float pbest;
+  Move abest;
 
   for (int i = 0; i < N; i++) {
-    std::stringstream ss;
-    ss << "game-" << i << ".bin";
-    std::ofstream file(ss.str(), std::ofstream::binary);
     state.Reset();
-    file << state.Serialize();
-    int n;
+    mcts.Clear();
+
     while (!state.IsTerminal()) {
-      n = state.LegalMoves(moves);
-      n = utils::Random::Get().GetInt(0, n - 1);
-      state.Step(moves[n]);
-      file << state.Serialize();
-      VLOG(1) << std::hex << std::hash<State>()(state);
+      pi = mcts.GetPolicy(state);
+      pbest = std::numeric_limits<float>::lowest();
+      for (int j = 0; j < kNumMoves; j++) {
+        if (pi[j] > pbest) {
+          pbest = pi[j];
+          abest = Move(j);
+        }
+      }
+      state.Step(abest);
     }
   }
-
-/*  int depth = 6;
-  std::vector<State> states(depth);
-
-  for (int i = 0; i < depth; i++) {
-    uint64_t nodes = perft(state, states, i);
-    VLOG(1) << "perft(" << i << ") = " << nodes;
-  }*/
 
   ::google::ShutDownCommandLineFlags();
   ::google::ShutdownGoogleLogging();

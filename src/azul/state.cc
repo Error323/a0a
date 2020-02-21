@@ -4,7 +4,14 @@
 
 #include <sstream>
 
-State::State() : center_(bag_), boards_{bag_, bag_} { Reset(); }
+State::State() : center_(bag_), boards_{bag_, bag_} {
+  Reset();
+}
+
+State::State(const State &s): center_(bag_), boards_{bag_, bag_} {
+  *this = s;
+}
+
 
 int State::LegalMoves(MoveList &moves) {
   int i = 0;
@@ -135,11 +142,8 @@ State &State::operator=(const State &s) {
 
   bag_ = s.bag_;
   center_ = s.center_;
-  center_.SetBag(bag_);
   boards_[0] = s.boards_[0];
-  boards_[0].SetBag(bag_);
   boards_[1] = s.boards_[1];
-  boards_[1].SetBag(bag_);
   turn_ = s.turn_;
 
   return *this;

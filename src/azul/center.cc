@@ -53,6 +53,20 @@ void Bag::ReShuffle() {
 
 void Bag::Return(Tile tile, int num) { returned_[tile] += num; }
 
+Bag& Bag::operator=(const Bag& bag) {
+  if (this == &bag) {
+    return *this;
+  }
+
+  size_ = bag.size_;
+  for (int i = 0; i < NUM_TILES; i++) {
+    tiles[i] = bag.tiles[i];
+    returned_[i] = bag.returned_[i];
+  }
+
+  return *this;
+}
+
 // ============================================================================
 // Holder class
 // ============================================================================
@@ -81,10 +95,20 @@ int Holder::Count() {
   return sum;
 }
 
+Holder& Holder::operator=(const Holder& h) {
+  if (this == &h) {
+    return *this;
+  }
+
+  for (int i = 0; i < NUM_TILES; i++) counts_[i] = h.counts_[i];
+
+  return *this;
+}
+
 // ============================================================================
 // Center class
 // ============================================================================
-Center::Center(Bag &bag) : bag_(&bag) { Reset(); }
+Center::Center(Bag &bag) : bag_(bag) { Reset(); }
 
 std::string Center::DebugStr() {
   std::stringstream ss;
@@ -132,7 +156,7 @@ void Center::Reset() {
   first = -1;
   for (int i = 0; i < NUM_FACTORIES; i++) {
     for (int j = 0; j < NUM_TILES_PER_FACTORY; j++) {
-      Tile t = bag_->Pop();
+      Tile t = bag_.Pop();
       holders[i].Add(t);
     }
   }
@@ -174,8 +198,19 @@ int Center::Count(Position pos) { return holders[pos].Count(); }
 void Center::NextRound() {
   for (int i = 0; i < NUM_FACTORIES; i++) {
     for (int j = 0; j < NUM_TILES_PER_FACTORY; j++) {
-      Tile t = bag_->Pop();
+      Tile t = bag_.Pop();
       holders[i].Add(t);
     }
   }
+}
+
+Center& Center::operator=(const Center& c) {
+  if (this == &c) {
+    return *this;
+  }
+
+  for (int i = 0; i < NUM_POS; i++) holders[i] = c.holders[i];
+  first = c.first;
+
+  return *this;
 }

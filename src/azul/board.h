@@ -23,10 +23,11 @@ class Board {
   void IncreaseFloorline();
   void NextRound();
   void Reset();
-  void SetBag(Bag &bag) {bag_ = &bag;}
   uint8_t Score() const;
   bool IsTerminal() { return terminal_; }
   bool WallHasTile(Tile tile, Line line);
+  Board &operator=(const Board &board);
+
   struct LLine {
     uint8_t tile_type;
     uint8_t count;
@@ -38,7 +39,7 @@ class Board {
  private:
   int16_t score_;
   bool terminal_;
-  Bag *bag_;
+  Bag &bag_;
 
   void UpdateScore(int row, int col, int tile);
 };

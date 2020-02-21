@@ -11,13 +11,12 @@
 #include "constants.h"
 #include "move.h"
 
-using MoveList = std::array<Move, kNumMoves>;
-
 class State {
  public:
   friend struct std::hash<State>;
 
   State();
+  State(const State &s);
   int LegalMoves(MoveList &moves);
   void MakePlanes(std::vector<float> &planes);
   void Reset();

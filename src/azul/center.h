@@ -24,6 +24,8 @@ class Bag {
   // get a random tile from the bag
   Tile Pop();
 
+  Bag &operator=(const Bag &bag);
+
   uint8_t tiles[NUM_TILES];
 
  private:
@@ -40,6 +42,7 @@ class Holder {
   int Count();
   int Count(Tile tile);
   void Clear();
+  Holder &operator=(const Holder &h);
   uint8_t counts_[NUM_TILES];
 };
 
@@ -63,14 +66,14 @@ class Center {
   void NextRound();
   bool IsRoundOver();
   void Clear();
-  void SetBag(Bag &bag) {bag_ = &bag;}
   int Count(Position pos);
   int Count(Position pos, Tile tile);
   // assume we can always add tiles to the center legally
   void AddTile(Tile tile, Position pos, int num = 1);
   int TakeTiles(Position pos, Tile tile);
+  Center &operator=(const Center &c);
   Holder holders[NUM_POS];
 
  private:
-  Bag *bag_;
+  Bag &bag_;
 };
