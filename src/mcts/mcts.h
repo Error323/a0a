@@ -19,7 +19,7 @@ class MCTS {
   std::unordered_map<std::size_t, int> Ns_;
   std::unordered_map<std::size_t, int> Nsa_;
   std::unordered_map<std::size_t, float> Qsa_;
-  std::unordered_map<std::size_t, Policy> Psa_;
+  std::unordered_map<std::size_t, float> Psa_;
   std::unordered_map<std::size_t, float> Wsa_;
 
   static constexpr float cpuct_{1.2f};

@@ -73,6 +73,7 @@ void State::Step(const Move move) {
     boards_[turn_].IncreaseFloorline();
   }
 
+  prev_turn_ = turn_;
   if (center_.IsRoundOver()) {
     boards_[0].NextRound();
     boards_[1].NextRound();
@@ -123,11 +124,10 @@ void State::MakePlanes(std::vector<float> &planes) {
 }
 
 int State::Outcome() {
-  // from the pov of the first player
-  int p1 = boards_[0].Score();
-  int p2 = boards_[1].Score();
-  if (p1 > p2) return 1;
-  if (p1 < p2) return -1;
+  int me = boards_[prev_turn_].Score();
+  int op = boards_[1u ^ prev_turn_].Score();
+  if (me > op) return 1;
+  if (me < op) return -1;
   return 0;
 }
 
@@ -147,4 +147,21 @@ State &State::operator=(const State &s) {
   turn_ = s.turn_;
 
   return *this;
+}
+
+State::Result State::Winner() {
+  CHECK(IsTerminal());
+  
+  int a = boards_[prev_turn_].Score();
+  int b = boards_[1u ^ prev_turn_].Score();
+
+  if (a == b) return DRAW;
+
+  if (prev_turn_ == 0) {
+    if (a > b) return PLAYER1;
+    else return PLAYER2;
+  } else {
+    if (a > b) return PLAYER2;
+    else return PLAYER1;
+  }
 }

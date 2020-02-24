@@ -13,11 +13,14 @@
 
 class State {
  public:
+  enum Result {DRAW, PLAYER1, PLAYER2};
   friend struct std::hash<State>;
 
   State();
   State(const State &s);
   int LegalMoves(MoveList &moves);
+  Result Winner();
+  int Turn() { return turn_; }
   void MakePlanes(std::vector<float> &planes);
   void Reset();
   void Step(const Move move);
@@ -32,6 +35,7 @@ class State {
   Center center_;
   std::array<Board, 2> boards_;
   uint8_t turn_{0};
+  uint8_t prev_turn_{0};
 };
 
 namespace std {
