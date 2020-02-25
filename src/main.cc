@@ -26,10 +26,10 @@ struct Datapoint {
 };
 
 
-void SaveGame(std::vector<Datapoint> game, State::Result result, const int i) {
+void SaveGame(std::vector<Datapoint> game, State::Result result, const int num) {
   static std::string randstr = utils::Random::Get().GetString(8);
   std::stringstream ss;
-  ss << "azul-" << i << "-" << randstr << ".bin";
+  ss << "azul-" << num << "-" << randstr << ".bin";
   std::ofstream file(ss.str(), std::iostream::binary);
 
   for (int i = 0, n = game.size(); i < n; i++) {
@@ -65,7 +65,7 @@ int main(int argc, char **argv) {
   MoveList moves;
   State state;
 
-  int N = 50;
+  int N = 10;
   MCTS mcts;
   Policy pi;
   float pbest;
@@ -92,8 +92,9 @@ int main(int argc, char **argv) {
       n++;
     }
 
-    SaveGame(game, state.Winner(), i);
-    printf("%08i %03i %c\n", i, n, kOutcome[state.Winner()]);
+    auto result = state.Winner();
+    SaveGame(game, result, i);
+    printf("%8i %03i %c\n", i, n + 1, kOutcome[result]);
   }
 
   ::google::ShutDownCommandLineFlags();

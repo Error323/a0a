@@ -94,6 +94,7 @@ float MCTS::Search(State& state) {
   State state_prime = state;
   state_prime.Step(abest);
   v = Search(state_prime);
+  if (state.Turn() != state_prime.Turn()) v = -v;
   a = std::hash<Move>()(abest);
   Ns_[s]++;
   Nsa_[s ^ a]++;

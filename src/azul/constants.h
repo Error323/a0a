@@ -3,7 +3,7 @@
 #include <stdint.h>
 
 /* tile types 5 in total, tile `FIRST' is handled differently */
-/*          0     1       2    3      4      5 */
+/*                    0     1       2    3      4      5 */
 enum Tile : uint8_t { BLUE, YELLOW, RED, BLACK, WHITE, NUM_TILES };
 
 /* part of an action or move */

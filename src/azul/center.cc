@@ -155,6 +155,7 @@ void Center::Clear() {
 void Center::Reset() {
   first = -1;
   for (int i = 0; i < NUM_FACTORIES; i++) {
+    holders[i].Clear();
     for (int j = 0; j < NUM_TILES_PER_FACTORY; j++) {
       Tile t = bag_.Pop();
       holders[i].Add(t);
@@ -202,6 +203,7 @@ void Center::NextRound() {
       holders[i].Add(t);
     }
   }
+  first = -1;
 }
 
 Center& Center::operator=(const Center& c) {

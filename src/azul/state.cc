@@ -75,22 +75,42 @@ void State::Step(const Move move) {
 
   prev_turn_ = turn_;
   if (center_.IsRoundOver()) {
-    boards_[0].NextRound();
-    boards_[1].NextRound();
-    center_.NextRound();
     // It's theoretically possible to have no tiles in the center the entire
     // round. When each factory has 4 tiles of the same type.
     turn_ = center_.first == -1 ? 0 : center_.first;
+    boards_[0].NextRound();
+    boards_[1].NextRound();
+    center_.NextRound();
   } else {
     turn_ ^= 1u;
   }
 }
 
 std::string State::Serialize() const {
+  // NOTE: Order matters here
   std::stringstream ss;
   uint8_t s;
+
+  // factories + center 6*5 bytes
+  ss.write(reinterpret_cast<const char *>(&center_.holders), sizeof(center_.holders));
+
+  // bag 5 bytes
+  ss.write(reinterpret_cast<const char *>(&bag_.tiles), sizeof(bag_.tiles));
+
   // turn 1 byte
   ss.write(reinterpret_cast<const char*>(&turn_), 1);
+
+  // left 5*2 bytes p1 & p2
+  ss.write(reinterpret_cast<const char *>(&boards_[0].left), sizeof(boards_[0].left));
+  ss.write(reinterpret_cast<const char *>(&boards_[1].left), sizeof(boards_[1].left));
+
+  // wall 4 bytes p1 & p2
+  ss.write(reinterpret_cast<const char *>(&boards_[0].wall), sizeof(boards_[0].wall));
+  ss.write(reinterpret_cast<const char *>(&boards_[1].wall), sizeof(boards_[1].wall));
+
+  // floorline 1 byte p1 & p2
+  ss.write(reinterpret_cast<const char *>(&boards_[0].floorline), 1);
+  ss.write(reinterpret_cast<const char *>(&boards_[1].floorline), 1);
 
   // scores 2 bytes
   s = boards_[0].Score();
@@ -98,25 +118,12 @@ std::string State::Serialize() const {
   s = boards_[1].Score();
   ss.write(reinterpret_cast<char *>(&s), sizeof(s));
 
-  // bag 5 bytes
-  ss.write(reinterpret_cast<const char *>(&bag_.tiles), sizeof(bag_.tiles));
-
-  // factories + center 6*5 bytes
-  ss.write(reinterpret_cast<const char *>(&center_.holders), sizeof(center_.holders));
-
   // first tile 1 byte
   ss.write(reinterpret_cast<const char *>(&center_.first), 1);
 
-  for (int p = 0; p <= 1; p++) {
-    // left 5*2 bytes
-    ss.write(reinterpret_cast<const char *>(&boards_[p].left), sizeof(boards_[p].left));
-    // floorline 1 byte
-    ss.write(reinterpret_cast<const char *>(&boards_[p].floorline), 1);
-    // wall 4 bytes
-    ss.write(reinterpret_cast<const char *>(&boards_[p].wall), sizeof(boards_[p].wall));
-  }
-
-  return ss.str();
+  auto str = ss.str();
+  CHECK(str.size() == 69);
+  return str;
 }
 
 void State::MakePlanes(std::vector<float> &planes) {
@@ -151,7 +158,7 @@ State &State::operator=(const State &s) {
 
 State::Result State::Winner() {
   CHECK(IsTerminal());
-  
+
   int a = boards_[prev_turn_].Score();
   int b = boards_[1u ^ prev_turn_].Score();
 
