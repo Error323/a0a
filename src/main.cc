@@ -12,6 +12,40 @@
 
 static const char kOutcome[] = {'D', 'W', 'L'};
 
+void Stats(const int num_games) {
+  State state;
+  MoveList moves;
+  int n;
+  int m = 0;
+  float b = 0;
+  uint64_t a;
+  std::vector<int> stats(kNumMoves, 0);
+
+  for (int i = 0; i < num_games; i++) {
+    while (!state.IsTerminal()) {
+      int n = state.LegalMoves(moves);
+      b += n;
+      n = utils::Random::Get().GetInt(0, n - 1);
+      a = std::hash<Move>()(moves[n]);
+      stats[a]++;
+      state.Step(moves[n]);
+      m++;
+    }
+    state.Reset();
+  }
+
+  b /= m;
+  int sum = 0;
+  n = 0;
+  for (int i = 0; i < kNumMoves; i++) {
+    if (stats[i] > 0) {
+      sum += stats[i];
+      n++;
+    }
+  }
+  VLOG(1) << "Branch factor: " << b << " Dirichlet alpha: " << ((sum / float(n)) / b);
+}
+
 struct Datapoint {
   Datapoint(const State &s, const Policy &pi, int z): s(s), pi(pi), z(z) {}
   void Serialize(std::ostream &stream) {
@@ -65,7 +99,8 @@ int main(int argc, char **argv) {
   MoveList moves;
   State state;
 
-  int N = 10;
+  int N = 10000;
+
   MCTS mcts;
   Policy pi;
   float pbest;

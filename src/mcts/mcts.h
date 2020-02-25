@@ -11,7 +11,7 @@ class MCTS {
  public:
   MCTS();
 
-  Policy GetPolicy(State &state, float temp=1.0f);
+  Policy GetPolicy(State &state, float temp=1.0f, bool dirichlet=true);
   void Clear();
 
 
@@ -24,6 +24,8 @@ class MCTS {
 
   static constexpr float cpuct_{1.2f};
   static constexpr int simulations_{800};
+  static constexpr int depth_{15};
+  static constexpr float alpha_{0.2f};
 
-  float Search(State &state);
+  float Search(State &state, int depth, float temp);
 };

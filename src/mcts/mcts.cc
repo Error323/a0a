@@ -17,26 +17,31 @@ MCTS::MCTS() {
   Wsa_.reserve(kReserves);
 }
 
-Policy MCTS::GetPolicy(State& state, float temp) {
+Policy MCTS::GetPolicy(State& state, float temp, bool dirichlet) {
   MoveList moves;
   Policy pi;
   pi.fill(0.0f);
   int num_moves = state.LegalMoves(moves);
   for (int i = 0; i < simulations_; i++) {
-    Search(state);
+    Search(state, 0, temp);
   }
 
   std::size_t s, a;
   s = std::hash<State>()(state);
-  float sum = 0.0f, p;
+  float sum = 0.0f, eta, p;
+  constexpr float eps = 0.25f;
   for (int i = 0; i < num_moves; i++) {
     a = std::hash<Move>()(moves[i]);
-
     if (Nsa_.find(s ^ a) == Nsa_.end()) {
       continue;
     }
 
-    p = std::pow(Nsa_[s ^ a], 1.0f / temp);
+    if (dirichlet) {
+      eta = utils::Random::Get().GetGamma(alpha_, 1.0);
+      p = (1.0f - eps) * Nsa_[s ^ a] + eps * eta;
+    } else {
+      p = Nsa_[s ^ a];
+    }
     pi[a] = p;
     sum += p;
   }
@@ -46,7 +51,7 @@ Policy MCTS::GetPolicy(State& state, float temp) {
   return pi;
 }
 
-float MCTS::Search(State& state) {
+float MCTS::Search(State& state, int depth, float temp) {
   if (state.IsTerminal()) return state.Outcome();
 
   MoveList moves;
@@ -82,7 +87,8 @@ float MCTS::Search(State& state) {
 
   for (int i = 0; i < n; i++) {
     a = std::hash<Move>()(moves[i]);
-    float u = std::sqrt(Ns_[s]) / (1.0f + Nsa_[s ^ a]);
+    float nsa = depth < depth_ ? std::pow(Nsa_[s ^ a], 1.0f / temp) : Nsa_[s ^ a];
+    float u = std::sqrt(Ns_[s]) / (1.0f + nsa);
     u *= cpuct_ * Psa_[s ^ a];
     u += Qsa_[s ^ a];
     if (u > ubest) {
@@ -93,7 +99,7 @@ float MCTS::Search(State& state) {
 
   State state_prime = state;
   state_prime.Step(abest);
-  v = Search(state_prime);
+  v = Search(state_prime, depth + 1, temp);
   if (state.Turn() != state_prime.Turn()) v = -v;
   a = std::hash<Move>()(abest);
   Ns_[s]++;
