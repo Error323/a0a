@@ -77,7 +77,7 @@ class Board:
 class State:
     def __init__(self):
         self.factories = np.zeros((5, 4), dtype=np.uint8) + Tile.NONE
-        self.center = np.zeros(15, dtype=np.uint8) + Tile.NONE
+        self.center = np.zeros(16, dtype=np.uint8) + Tile.NONE
         self.bag = np.zeros(5, dtype=np.uint8)
         self.turn = 0
         self.first = -1
