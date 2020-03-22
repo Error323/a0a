@@ -99,11 +99,10 @@ int main(int argc, char **argv) {
   MoveList moves;
   State state;
 
-  int N = 10000;
+  int N = 8334;
 
   MCTS mcts;
   Policy pi;
-  float pbest;
   Move abest;
 
   std::vector<Datapoint> game;
@@ -114,15 +113,8 @@ int main(int argc, char **argv) {
     int n = 0;
 
     while (!state.IsTerminal()) {
-      pi = mcts.GetPolicy(state);
+      pi = mcts.GetPolicy(state, abest, 1e-5f, true);
       game.emplace_back(Datapoint{state, pi, 0});
-      pbest = std::numeric_limits<float>::lowest();
-      for (int j = 0; j < kNumMoves; j++) {
-        if (pi[j] > pbest) {
-          pbest = pi[j];
-          abest = Move(j);
-        }
-      }
       state.Step(abest);
       n++;
     }

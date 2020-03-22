@@ -110,11 +110,10 @@ class State:
                 self.center[j] = t 
                 n -= 1
                 j += 1
-        p = t if t == 0 else 1
-        self.scores[p] = s1
-        self.scores[1^p] = s2
-        self.boards[p].parse(l1, w1, f1)
-        self.boards[1^p].parse(l2, w2, f2)
+        self.scores[0] = s1
+        self.scores[1] = s2
+        self.boards[0].parse(l1, w1, f1)
+        self.boards[1].parse(l2, w2, f2)
 
 
     def __str__(self):

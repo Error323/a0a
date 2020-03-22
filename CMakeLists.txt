@@ -3,7 +3,7 @@ project (a0a CXX)
 
 set (CMAKE_CXX_STANDARD 17)
 set (CMAKE_CXX_FLAGS "-Wall -Wextra -Wpedantic")
-set (CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG -march=native")
+set (CMAKE_CXX_FLAGS_RELEASE "-O3 -s -DNDEBUG -march=native")
 set (CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 
 list (APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules")

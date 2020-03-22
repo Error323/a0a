@@ -40,7 +40,7 @@ static int Pop1stBit(uint32_t* board);
 //=============================================================================
 void InitScoreTable() {
   uint32_t mask, board;
-  int square, i, j, n;
+  int square, i, index, n;
 
   scores_.resize(Board::SIZE * Board::SIZE * (1 << kMagicBits));
 
@@ -50,8 +50,9 @@ void InitScoreTable() {
 
     for (i = 0; i < (1 << n); i++) {
       board = IndexToBoard(i, n, mask);
-      j = Transform(board, kMagics[square], kMagicBits);
-      scores_[square * (1 << kMagicBits) + j] = ComputeScore(square, board);
+      index = square * (1 << kMagicBits);
+      index += Transform(board, kMagics[square], kMagicBits);
+      scores_[index] = ComputeScore(square, board);
     }
   }
 
