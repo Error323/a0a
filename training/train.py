@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 
 import sys
-import random
+import glob
 import struct
 import argparse
+import random
 import multiprocessing
 import tensorflow as tf
 import numpy as np
@@ -12,65 +13,86 @@ from pathlib import Path
 from tensorflow.keras.layers import Conv2D, Dense, BatchNormalization, AvgPool2D, Add, Activation, Flatten
 from tensorflow.keras import Model, Input
 
-BATCH_SIZE = 1024
+BATCH_SIZE = 512
 NUM_PLANES = 49
 IMG_SIZE = 5
 NUM_MOVES = 180
-STATE = "30s5sB10s10sIIBBBBb"
+STATE = "30s5sB10s10sIIBBBBb720sb"
 STATESIZE = struct.calcsize(STATE)
-SAMPLESIZE = STATESIZE + NUM_MOVES*4 + 1 # size of a single datapoint (s, pi, z)
-SKIP = 10 # randomly skip up to this many entries in a game
+SHUFFLE_BUFFER_SIZE = 10000
 
 reg = tf.keras.regularizers.l2(l=1e-4)
 
-def parse_function(data):
-    """converts raw bytes containing (s, pi, z) to planes and tensors"""
-    c, b, t, l1, l2, w1, w2, f1, f2, s1, s2, f = struct.unpack(STATE, data[:STATESIZE])
-    pi = tf.io.decode_raw(data[STATESIZE:-1], tf.float32)
-    z = tf.io.decode_raw(data[-1], tf.int8)
-    z = tf.cast(z, tf.float32)
-    
+def parse_function(planes, probs, winner):
+    """converts raw bytes containing (s, pi, z) to tensors"""
+    s = tf.io.decode_raw(planes, tf.float32)
+    pi = tf.io.decode_raw(probs, tf.float32)
+    z = tf.io.decode_raw(winner, tf.float32)
+    s = tf.reshape(s, (IMG_SIZE, IMG_SIZE, NUM_PLANES))
     return s, (pi, z)
 
 
 def get_files(path):
+    path = path.decode("utf-8") + "/*.bin"
+    files = glob.glob(path)
     return files
 
 
-def gen(filenames):
-    for filename in filenames:
-        with open(filename, "rb") as f:
-            data = f.read()
-        n = len(data) // SAMPLESIZE
-        i = np.random.randint(0, SKIP)
-        while i < n:
-            yield data[i*SAMPLESIZE:i*SAMPLESIZE+SAMPLESIZE]
-            i += np.random.randint(0, SKIP) + 1
+def gen(inputdir, skip=0):
+    filenames = list(get_files(inputdir))
+    # 1d planes for easy indexing
+    flat_planes = []
+    for i in range(256):
+        flat_planes.append(np.zeros(25, dtype=np.float32) + i)
+    
+    while True:
+        if skip > 0:
+            random.shuffle(filenames)
+
+        for filename in filenames:
+            with open(filename, "rb") as f:
+                data = f.read()
+            n = len(data) // STATESIZE
+            idx = random.randint(0, skip)
+            while idx < n:
+                buf = struct.unpack(STATE, data[idx*STATESIZE:idx*STATESIZE+STATESIZE])
+                c, b, t, l1, l2, w1, w2, f1, f2, s1, s2, f, probs, winner = buf
+
+                planes = flat_planes[s1].tobytes() + flat_planes[s2].tobytes()
+                for i in range(5):
+                    planes += flat_planes[b[i]].tobytes()
+                for i in range(42):
+                    planes += flat_planes[i].tobytes()
+
+                winner = float(winner)
+                winner = struct.pack('f', winner)
+                yield (planes, probs, winner)
+                idx += random.randint(0, skip) + 1
 
 
-def create_dataset(filenames, shuffle):
-    num_cpus = max(multiprocessing.cpu_count() - 2, 1)
-    ds = tf.data.Dataset.from_generator(gen, (tf.string), (tf.TensorShape([])), args=(filenames))
-    ds = ds.map(parse_function, num_parallel_calls=num_cpus)
+def create_dataset(inputdir, shuffle):
+    skip = 10 if shuffle else 0
+    ds = tf.data.Dataset.from_generator(gen, (tf.string, tf.string, tf.string), args=(str(inputdir), skip))
+    ds = ds.map(parse_function)
     if shuffle:
-        ds = ds.shuffle(BATCH_SIZE * 64)
+        ds = ds.shuffle(SHUFFLE_BUFFER_SIZE)
     ds = ds.batch(BATCH_SIZE)
     return ds
 
 
 def conv(x, filters, kernel_size, strides=(1, 1)):
-    x = Conv2D(filters, kernel_size, strides, padding='same', kernel_regularizer=reg, use_bias=False)(x)
+    x = Conv2D(filters, kernel_size, strides, padding="same", kernel_regularizer=reg, use_bias=False)(x)
     x = BatchNormalization(scale=False, beta_regularizer=reg)(x)
-    x = Activation('relu')(x)
+    x = Activation("relu")(x)
     return x
 
 
 def res_block(inputs, filters, kernel_size):
     x = conv(inputs, filters, kernel_size)
-    x = Conv2D(filters, kernel_size, (1, 1), padding='same', kernel_regularizer=reg, use_bias=False)(x)
+    x = Conv2D(filters, kernel_size, (1, 1), padding="same", kernel_regularizer=reg, use_bias=False)(x)
     x = BatchNormalization(scale=False, beta_regularizer=reg)(x)
     x = Add()([x, inputs])
-    x = Activation('relu')(x)
+    x = Activation("relu")(x)
     return x
 
 
@@ -90,8 +112,8 @@ def resnet(x, blocks, filters):
     # value head
     v = conv(x, 32, (1, 1))
     v = Flatten()(v)
-    v = Dense(64, kernel_regularizer=reg, bias_regularizer=reg, activation='relu')(v)
-    v = Dense(1, kernel_regularizer=reg, bias_regularizer=reg, activation='tanh', name="value")(v)
+    v = Dense(64, kernel_regularizer=reg, bias_regularizer=reg, activation="relu")(v)
+    v = Dense(1, kernel_regularizer=reg, bias_regularizer=reg, activation="tanh", name="value")(v)
 
     return pi, v
 
@@ -107,7 +129,7 @@ class LogLr(tf.keras.callbacks.Callback):
     def on_batch_end(self, batch, logs=None):
         lr = self.model.optimizer.lr.numpy()
         if self.counter % self.steps == 0:
-            tf.summary.scalar('learning rate', data=lr, step=self.counter)
+            tf.summary.scalar("learning rate", data=lr, step=self.counter)
         self.counter += 1
 
 
@@ -118,6 +140,17 @@ def main(args):
     checkpoint_path = str(wgt)
     dst.mkdir(parents=True, exist_ok=True)
 
+
+    train_ds = create_dataset(args.input / "train", True)
+    test_ds = create_dataset(args.input / "test", False)
+
+    """
+    for x, y in train_ds.take(1):
+        print(x)
+        print(y[0])
+        print(y[1])
+    """
+
     file_writer = tf.summary.create_file_writer(logdir + "/metrics")
     file_writer.set_as_default()
     # Create a callback that saves the model's weights
@@ -125,9 +158,9 @@ def main(args):
     # Log various metrics on tensorboard with this callback
     tensorboard_cb = tf.keras.callbacks.TensorBoard(log_dir=logdir, update_freq=1000, profile_batch=0)
 
-    inputs = Input(shape=(IMG_SIZE, IMG_SIZE, NUM_PLANES), name='planes')
-    policy, value = resnet(inputs, 6, 64)
-    model = Model(inputs, outputs=[policy, value])
+    inputs = Input(shape=(IMG_SIZE, IMG_SIZE, NUM_PLANES), name="planes")
+    policy, value = resnet(inputs, args.blocks, args.filters)
+    model = Model(inputs, outputs=[policy, value], name=f"ResNet-{args.blocks}x{args.filters}")
 
     print(model.summary())
 
@@ -138,12 +171,11 @@ def main(args):
             loss=losses,
             metrics=["accuracy"])
 
-    """
     model.fit(train_ds, 
+            steps_per_epoch=args.steps,
             validation_data=test_ds, 
-            validation_steps=val_steps, 
-            callbacks=[tensorboard_cb, learningrate_cb, checkpoint_cb, LogLr()])
-    """
+            validation_steps=60000//BATCH_SIZE, 
+            callbacks=[tensorboard_cb, checkpoint_cb, LogLr()])
 
     return 0
 
@@ -151,7 +183,7 @@ def main(args):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="AlphaZero Azul Trainer")
     parser.add_argument("--input", type=Path, \
-            help="input directory")
+            help="input directory containing test/ and train/ subdirs")
     parser.add_argument("--resume", type=Path, default=None, \
             help="resume from this model")
     parser.add_argument("--lr", type=float, \
@@ -161,9 +193,9 @@ if __name__ == "__main__":
     parser.add_argument("--output", type=Path, \
             help="output directory")
     parser.add_argument("--blocks", type=int, default=6, \
-            help="nof blocks in the resnet %(default)s")
+            help="nof blocks in the resnet (default: %(default)s)")
     parser.add_argument("--filters", type=int, default=64, \
-            help="nof filters per convlayer in the resnet %(default)s")
+            help="nof filters per convlayer in the resnet (default: %(default)s)")
 
     args = parser.parse_args()
     sys.exit(main(args))
