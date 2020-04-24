@@ -100,6 +100,9 @@ int main(int argc, char **argv) {
   State state;
 
   int N = 8334;
+  if (argc == 2) {
+    N = std::atoi(argv[1]);
+  }
 
   MCTS mcts;
   Policy pi;

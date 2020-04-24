@@ -13,7 +13,7 @@ from pathlib import Path
 from tensorflow.keras.layers import Conv2D, Dense, BatchNormalization, AvgPool2D, Add, Activation, Flatten
 from tensorflow.keras import Model, Input
 
-BATCH_SIZE = 512
+BATCH_SIZE = 1024
 NUM_PLANES = 49
 IMG_SIZE = 5
 NUM_MOVES = 180
@@ -29,6 +29,8 @@ def parse_function(planes, probs, winner):
     pi = tf.io.decode_raw(probs, tf.float32)
     z = tf.io.decode_raw(winner, tf.float32)
     s = tf.reshape(s, (IMG_SIZE, IMG_SIZE, NUM_PLANES))
+    pi = tf.reshape(pi, (NUM_MOVES,))
+    z = tf.reshape(z, (1,))
     return s, (pi, z)
 
 
@@ -71,9 +73,11 @@ def gen(inputdir, skip=0):
 
 
 def create_dataset(inputdir, shuffle):
+    num_cpus = max(multiprocessing.cpu_count() - 2, 1)
     skip = 10 if shuffle else 0
     ds = tf.data.Dataset.from_generator(gen, (tf.string, tf.string, tf.string), args=(str(inputdir), skip))
-    ds = ds.map(parse_function)
+    ds = ds.map(parse_function, num_parallel_calls=num_cpus)
+    ds = ds.prefetch(tf.data.experimental.AUTOTUNE)
     if shuffle:
         ds = ds.shuffle(SHUFFLE_BUFFER_SIZE)
     ds = ds.batch(BATCH_SIZE)
@@ -161,10 +165,9 @@ def main(args):
     inputs = Input(shape=(IMG_SIZE, IMG_SIZE, NUM_PLANES), name="planes")
     policy, value = resnet(inputs, args.blocks, args.filters)
     model = Model(inputs, outputs=[policy, value], name=f"ResNet-{args.blocks}x{args.filters}")
+    losses = {"policy": "categorical_crossentropy", "value": "mean_squared_error"}
 
     print(model.summary())
-
-    losses = {"policy": "categorical_crossentropy", "value": "mean_squared_error"}
 
     # Compile and train
     model.compile(optimizer=tf.keras.optimizers.SGD(learning_rate=args.lr, momentum=0.9, nesterov=True),
