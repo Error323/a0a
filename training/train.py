@@ -12,19 +12,114 @@ import numpy as np
 from pathlib import Path
 from tensorflow.keras.layers import Conv2D, Dense, BatchNormalization, AvgPool2D, Add, Activation, Flatten
 from tensorflow.keras import Model, Input
+from generator import Generator
 
-BATCH_SIZE = 1024
+BATCH_SIZE = 512
 NUM_PLANES = 49
 IMG_SIZE = 5
 NUM_MOVES = 180
-STATE = "30s5sB10s10sIIBBBBb720sb"
+STATE = "30s5sB10s10s4s4sBBBBb720sb"
 STATESIZE = struct.calcsize(STATE)
-SHUFFLE_BUFFER_SIZE = 10000
+SHUFFLE_BUFFER_SIZE = 100000
 
 reg = tf.keras.regularizers.l2(l=1e-4)
 
-def parse_function(planes, probs, winner):
+# 1d planes for easy indexing
+flat_planes = []
+for i in range(256):
+    flat_planes.append(np.zeros(25, dtype=np.float32) + i)
+    
+
+def create_planes(data):
+    """
+    1 + 1 + 5 + 5*4 + 15 + 1 + 1 + 1 + 1 + 1 + 1 + 1 = 49
+    |   |   |   |     |    |   |   |   |   |   |   |
+    |   |   |   |     |    |   |   |   |   |   |   them floor: v in {0,...,7}
+    |   |   |   |     |    |   |   |   |   |   them wall: v in {0, 1}
+    |   |   |   |     |    |   |   |   |   them left: v in {0,...,5}
+    |   |   |   |     |    |   |   |   us floor: v in {0,...,7}
+    |   |   |   |     |    |   |   us wall: v in {0, 1}
+    |   |   |   |     |    |   us left: v in {0,...,5}
+    |   |   |   |     |    1st tile: v in {-1, 0, 1}
+    |   |   |   |     center: v in {0,...,5}
+    |   |   |   factories: v in {0,...,5}
+    |   |   bag: v in {0,...,20}
+    |   them score: v in {0,...,255}
+    us score: v in {0,...,255}
+    """
+    buf = struct.unpack(STATE, data.numpy())
+    c, b, t, l1, l2, w1, w2, f1, f2, s1, s2, f, probs, winner = buf
+
+    # scores
+    planes = flat_planes[s1].tobytes() + flat_planes[s2].tobytes()
+
+    # bag
+    for i in range(5):
+        planes += flat_planes[b[i]].tobytes()
+
+    # factories
+    for i in range(5):
+        tiles = struct.unpack("BBBBB", c[i*5:i*5+5])
+        empty = 4
+        for t, n in enumerate(tiles):
+            for _ in range(n):
+                planes += flat_planes[t + 1].tobytes()
+                empty -= 1
+        for _ in range(empty):
+            planes += flat_planes[0].tobytes()
+
+    # center
+    tiles = struct.unpack("BBBBB", c[25:])
+    empty = 15
+    for t, n in enumerate(tiles):
+        for _ in range(n):
+            planes += flat_planes[t + 1].tobytes()
+            empty -= 1
+    for _ in range(empty):
+        planes += flat_planes[0].tobytes()
+
+    # first tile
+    planes += (np.zeros(25, dtype=np.float32) + f).tobytes()
+
+    # p1 left
+    plane = np.zeros((5, 5), dtype=np.float32)
+    for i in range(5):
+        t, n = struct.unpack("BB", l1[i*2:i*2+2])
+        for j in range(n):
+            plane[i, j] = t + 1
+    planes += plane.tobytes()
+
+    # p1 wall
+    planes += np.unpackbits(np.frombuffer(w1, dtype=np.uint8))[7:].astype(np.float32).tobytes()
+
+    # p1 floor
+    planes += flat_planes[f1].tobytes()
+
+    # p2 left
+    plane = np.zeros((5, 5), dtype=np.float32)
+    for i in range(5):
+        t, n = struct.unpack("BB", l2[i*2:i*2+2])
+        for j in range(n):
+            plane[i, j] = t + 1
+    planes += plane.tobytes()
+
+    # p2 wall
+    planes += np.unpackbits(np.frombuffer(w2, dtype=np.uint8))[7:].astype(np.float32).tobytes()
+
+    # p2 floor
+    planes += flat_planes[f2].tobytes()
+
+    assert len(planes) == IMG_SIZE * IMG_SIZE * NUM_PLANES * 4
+
+    winner = float(winner)
+    winner = struct.pack('f', winner)
+
+    return planes, probs, winner
+    
+
+def parse_function(data):
     """converts raw bytes containing (s, pi, z) to tensors"""
+    [planes, probs, winner] = tf.py_function(func=create_planes, inp=[data], Tout=(tf.string, tf.string, tf.string) )
     s = tf.io.decode_raw(planes, tf.float32)
     pi = tf.io.decode_raw(probs, tf.float32)
     z = tf.io.decode_raw(winner, tf.float32)
@@ -34,52 +129,10 @@ def parse_function(planes, probs, winner):
     return s, (pi, z)
 
 
-def get_files(path):
-    path = path.decode("utf-8") + "/*.bin"
-    files = glob.glob(path)
-    return files
-
-
-def gen(inputdir, skip=0):
-    filenames = list(get_files(inputdir))
-    # 1d planes for easy indexing
-    flat_planes = []
-    for i in range(256):
-        flat_planes.append(np.zeros(25, dtype=np.float32) + i)
-    
-    while True:
-        if skip > 0:
-            random.shuffle(filenames)
-
-        for filename in filenames:
-            with open(filename, "rb") as f:
-                data = f.read()
-            n = len(data) // STATESIZE
-            idx = random.randint(0, skip)
-            while idx < n:
-                buf = struct.unpack(STATE, data[idx*STATESIZE:idx*STATESIZE+STATESIZE])
-                c, b, t, l1, l2, w1, w2, f1, f2, s1, s2, f, probs, winner = buf
-
-                planes = flat_planes[s1].tobytes() + flat_planes[s2].tobytes()
-                for i in range(5):
-                    planes += flat_planes[b[i]].tobytes()
-                for i in range(42):
-                    planes += flat_planes[i].tobytes()
-
-                winner = float(winner)
-                winner = struct.pack('f', winner)
-                yield (planes, probs, winner)
-                idx += random.randint(0, skip) + 1
-
-
 def create_dataset(inputdir, shuffle):
-    num_cpus = max(multiprocessing.cpu_count() - 2, 1)
-    skip = 10 if shuffle else 0
-    ds = tf.data.Dataset.from_generator(gen, (tf.string, tf.string, tf.string), args=(str(inputdir), skip))
-    ds = ds.map(parse_function, num_parallel_calls=num_cpus)
-    ds = ds.prefetch(tf.data.experimental.AUTOTUNE)
-    if shuffle:
-        ds = ds.shuffle(SHUFFLE_BUFFER_SIZE)
+    gen = Generator(str(inputdir), shuffle, STATESIZE)
+    ds = tf.data.Dataset.from_generator(lambda: (x for x in gen), tf.string)
+    ds = ds.map(parse_function, num_parallel_calls=8)
     ds = ds.batch(BATCH_SIZE)
     return ds
 
