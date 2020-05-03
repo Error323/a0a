@@ -12,14 +12,18 @@ import numpy as np
 from pathlib import Path
 from tensorflow.keras.layers import Conv2D, Dense, BatchNormalization, AvgPool2D, Add, Activation, Flatten
 from tensorflow.keras import Model, Input
+from tensorflow.keras.mixed_precision import experimental as mixed_precision
 from generator import Generator
 
-BATCH_SIZE = 512
+BATCH_SIZE = 1024
 NUM_PLANES = 49
 IMG_SIZE = 5
 NUM_MOVES = 180
 
 reg = tf.keras.regularizers.l2(l=1e-4)
+policy = mixed_precision.Policy('mixed_float16')
+mixed_precision.set_policy(policy)
+
 
 
 def conv(x, filters, kernel_size, strides=(1, 1)):
@@ -49,13 +53,14 @@ def resnet(x, blocks, filters):
     # policy head
     pi = conv(x, NUM_MOVES, (1, 1))
     pi = AvgPool2D(pool_size=(IMG_SIZE, IMG_SIZE))(pi)
-    pi = Flatten(name="policy")(pi)
+    pi = Flatten(name="policy", dtype="float32")(pi)
 
     # value head
     v = conv(x, 32, (1, 1))
     v = Flatten()(v)
     v = Dense(64, kernel_regularizer=reg, bias_regularizer=reg, activation="relu")(v)
-    v = Dense(1, kernel_regularizer=reg, bias_regularizer=reg, activation="tanh", name="value")(v)
+    v = Dense(1, kernel_regularizer=reg, bias_regularizer=reg)(v)
+    v = Activation("tanh", name="value", dtype="float32")(v)
 
     return pi, v
 
