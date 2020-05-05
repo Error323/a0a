@@ -1,6 +1,7 @@
 add_subdirectory (azul)
 add_subdirectory (mcts)
 add_subdirectory (utils)
+add_subdirectory (neural)
 
 add_executable (a0a
   main.cc

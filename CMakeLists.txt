@@ -12,7 +12,7 @@ find_package (Threads REQUIRED)
 find_package (GFlags REQUIRED)
 find_package (Glog REQUIRED)
 find_package (GTest REQUIRED)
-find_package (cuDNN REQUIRED)
+find_package (CUDA REQUIRED)
 
 #
 # Version
