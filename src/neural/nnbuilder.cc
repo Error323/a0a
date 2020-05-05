@@ -69,7 +69,7 @@ class WeightList {
     }
   }
 
-  weights_t PopConv(nv::DimsNCHW dims) {
+  weights_t PopConv(nv::Dims4 dims) {
     // Extract the convolution kernels and fuse the batchnorm weights
     auto& weights_t = Pop();  // weights
     auto& bias_t = Pop();     // bias
@@ -98,10 +98,10 @@ class WeightList {
     nv::Weights bias{nv::DataType::kFLOAT, bias_t.data(),
                      int64_t(bias_t.size())};
     // clang-format off
-    for (int o = 0, O = dims.n(); o < O; o++) {
-      for (int i = 0, I = dims.c(); i < I; i++) {
-        for (int h = 0, H = dims.h(); h < H; h++) {
-          for (int w = 0, W = dims.w(); w < W; w++) {
+    for (int o = 0, O = dims.d[0]; o < O; o++) {
+      for (int i = 0, I = dims.d[1]; i < I; i++) {
+        for (int h = 0, H = dims.d[2]; h < H; h++) {
+          for (int w = 0, W = dims.d[3]; w < W; w++) {
             weights_t[o*I*H*W + i*H*W + h*W + w] =
                 tmp[h*W*I*O + w*I*O + i*O + o] * sigma_t[o];
           }
@@ -116,17 +116,30 @@ class WeightList {
     return std::make_pair(weights, bias);
   }
 
-  weights_t PopDense() {
+  weights_t PopDense(nv::Dims4 dims) {
     auto& weights_t = Pop();  // weights
     auto& bias_t = Pop();     // bias
 
     VLOG(1) << "Popped Dense " << index_ << " " << weights_t.size() << ", "
             << bias_t.size();
 
+    std::vector<float> tmp(weights_t);
     nv::Weights weights{nv::DataType::kFLOAT, weights_t.data(),
                         int64_t(weights_t.size())};
     nv::Weights bias{nv::DataType::kFLOAT, bias_t.data(),
                      int64_t(bias_t.size())};
+    // clang-format off
+    for (int o = 0, O = dims.d[0]; o < O; o++) {
+      for (int i = 0, I = dims.d[1]; i < I; i++) {
+        for (int h = 0, H = dims.d[2]; h < H; h++) {
+          for (int w = 0, W = dims.d[3]; w < W; w++) {
+            weights_t[o*I*H*W + i*H*W + h*W + w] =
+                tmp[h*W*I*O + w*I*O + i*O + o];
+          }
+        }
+      }
+    }
+    // clang-format on
 
     return std::make_pair(weights, bias);
   }
@@ -165,7 +178,7 @@ nv::ILayer* Conv(nv::INetworkDefinition* net, WeightList& wl, nv::ILayer* x,
                  int filters, nv::Dims kernel_size) {
   nv::Weights weights, bias;
   std::tie(weights, bias) =
-      wl.PopConv(nv::DimsNCHW{filters, x->getOutput(0)->getDimensions().d[1],
+      wl.PopConv(nv::Dims4{filters, x->getOutput(0)->getDimensions().d[1],
                               kernel_size.d[0], kernel_size.d[1]});
   nv::IConvolutionLayer* conv = net->addConvolutionNd(
       *x->getOutput(0), filters, kernel_size, weights, bias);
@@ -179,7 +192,7 @@ nv::ILayer* ResBlock(nv::INetworkDefinition* net, WeightList& wl,
   nv::ILayer* x = Conv(net, wl, input, filters, kernel_size);
   nv::Weights weights, bias;
   std::tie(weights, bias) =
-      wl.PopConv(nv::DimsNCHW{filters, x->getOutput(0)->getDimensions().d[1],
+      wl.PopConv(nv::Dims4{filters, x->getOutput(0)->getDimensions().d[1],
                               kernel_size.d[0], kernel_size.d[1]});
   nv::IConvolutionLayer* conv = net->addConvolutionNd(
       *x->getOutput(0), filters, kernel_size, weights, bias);
@@ -211,10 +224,10 @@ int main(int argc, char* argv[]) {
 
   // input definition
   nv::ITensor* input = net->addInput("planes", nv::DataType::kFLOAT,
-                                     nv::DimsNCHW{kBatchSize, 49, 5, 5});
+                                     nv::Dims4{kBatchSize, 49, 5, 5});
 
   // initial convolution
-  std::tie(weights, bias) = wl.PopConv(nv::DimsNCHW{64, 49, 3, 3});
+  std::tie(weights, bias) = wl.PopConv(nv::Dims4{64, 49, 3, 3});
   nv::IConvolutionLayer* conv =
       net->addConvolutionNd(*input, kFilters, nv::DimsHW{3, 3}, weights, bias);
   conv->setPaddingMode(nv::PaddingMode::kSAME_UPPER);
@@ -238,11 +251,11 @@ int main(int argc, char* argv[]) {
   net->markOutput(*pi->getOutput(0));
 
   // value head
-  std::tie(weights, bias) = wl.PopDense();
+  std::tie(weights, bias) = wl.PopDense(nv::Dims4{64, 32, 5, 5});
   v = net->addFullyConnected(*v->getOutput(0), 64, weights, bias);
   v = net->addActivation(*v->getOutput(0), nv::ActivationType::kRELU);
 
-  std::tie(weights, bias) = wl.PopDense();
+  std::tie(weights, bias) = wl.PopDense(nv::Dims4{1, 1, 1, 64});
   v = net->addFullyConnected(*v->getOutput(0), 1, weights, bias);
   v = net->addActivation(*v->getOutput(0), nv::ActivationType::kTANH);
   v->getOutput(0)->setName("value");

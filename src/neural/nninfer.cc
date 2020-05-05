@@ -63,6 +63,7 @@ int main(int argc, char *argv[]) {
   cudaSafeCall(cudaMalloc(&buffers[policy_idx], policy.size() * sizeof(float)));
   cudaSafeCall(cudaMalloc(&buffers[value_idx], value.size() * sizeof(float)));
 
+  cudaSafeCall(cudaMemcpy(buffers[planes_idx], planes.data(), planes.size()*sizeof(float), cudaMemcpyHostToDevice));
   if (context->execute(1, buffers)) {
 
     cudaSafeCall(cudaMemcpy(policy.data(), buffers[policy_idx], policy.size() * sizeof(float), cudaMemcpyDeviceToHost));
