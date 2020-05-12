@@ -48,7 +48,7 @@ class Random {
  private:
   Random();
 
-  std::mt19937 gen_;
+  std::mt19937_64 rng_;
 };
 
 }  // namespace utils

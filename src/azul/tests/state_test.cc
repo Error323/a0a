@@ -80,3 +80,18 @@ TEST_F(StateTest, Assignment) {
     EXPECT_NE(std::hash<State>()(s2), std::hash<State>()(state_));
   }
 }
+
+TEST_F(StateTest, MakePlanes) {
+  state_.FromString("________2221________44444__________");
+
+  Move move(FAC3, YELLOW, LINE1);
+  state_.Step(move);
+
+  move.factory = CENTER;
+  move.tile_type = WHITE;
+  move.line = LINE5;
+  state_.Step(move);
+
+  std::vector<float> planes(49*5*5);
+  state_.MakePlanes(planes.data());
+}

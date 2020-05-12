@@ -27,35 +27,51 @@
 
 #include "random.h"
 
+#include <glog/logging.h>
+
+#include <chrono>
+#include <thread>
+
 namespace utils {
 
-Random::Random() : gen_(std::random_device()()) {}
+Random::Random() {
+  // Mix seeds from different sources to ensure randomness per thread instance
+  std::random_device rd;
+  std::ranlux48 gen(rd());
+  std::uint64_t seed1 = (gen() << 16) ^ gen();
+  std::uint64_t seed2 =
+      std::chrono::high_resolution_clock::now().time_since_epoch().count();
+  std::uint64_t thread_id =
+      std::hash<std::thread::id>()(std::this_thread::get_id());
+  std::uint64_t seed = seed1 ^ seed2 ^ thread_id;
+  rng_.seed(seed);
+}
 
 Random& Random::Get() {
-  static Random rand;
+  thread_local Random rand;
   return rand;
 }
 
 int Random::GetInt(int min, int max) {
   std::uniform_int_distribution<> dist(min, max);
-  return dist(gen_);
+  return dist(rng_);
 }
 
 bool Random::GetBool() { return GetInt(0, 1) != 0; }
 
 uint32_t Random::GetFewBits32() {
   std::uniform_int_distribution<uint32_t> dist;
-  return dist(gen_) & dist(gen_);
+  return dist(rng_) & dist(rng_);
 }
 
 double Random::GetDouble(double maxval) {
   std::uniform_real_distribution<> dist(0.0, maxval);
-  return dist(gen_);
+  return dist(rng_);
 }
 
 float Random::GetFloat(float maxval) {
   std::uniform_real_distribution<> dist(0.0, maxval);
-  return dist(gen_);
+  return dist(rng_);
 }
 
 std::string Random::GetString(int length) {
@@ -68,7 +84,7 @@ std::string Random::GetString(int length) {
 
 double Random::GetGamma(double alpha, double beta) {
   std::gamma_distribution<double> dist(alpha, beta);
-  return dist(gen_);
+  return dist(rng_);
 }
 
 }  // namespace utils

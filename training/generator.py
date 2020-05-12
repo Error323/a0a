@@ -7,7 +7,7 @@ import struct
 NUM_PLANES = 49
 IMG_SIZE = 5
 NUM_MOVES = 180
-STATE = "30s5sB10s10s4s4sBBBBb720sb"
+STATE = "30s5sB10s10sIIBBBBb720sb"
 
 class Generator(tf.keras.utils.Sequence):
     def __init__(self, inputdir, shuffle, batchsize):
@@ -134,7 +134,10 @@ class Generator(tf.keras.utils.Sequence):
         index += 1
 
         # p1 wall
-        planes[index, :, :] = np.unpackbits(np.frombuffer(w1, dtype=np.uint8))[7:].reshape(IMG_SIZE, IMG_SIZE).astype(np.float32)
+        for i in range(5):
+            for j in range(5):
+                n = 24 - (i * IMG_SIZE + j)
+                planes[index, i, j] = (w1 >> n) & 1
         index += 1
 
         # p1 floor
@@ -149,7 +152,10 @@ class Generator(tf.keras.utils.Sequence):
         index += 1
 
         # p2 wall
-        planes[index, :, :] = np.unpackbits(np.frombuffer(w2, dtype=np.uint8))[7:].reshape(IMG_SIZE, IMG_SIZE).astype(np.float32)
+        for i in range(5):
+            for j in range(5):
+                n = 24 - (i * IMG_SIZE + j)
+                planes[index, i, j] = (w2 >> n) & 1
         index += 1
 
         # p2 floor
