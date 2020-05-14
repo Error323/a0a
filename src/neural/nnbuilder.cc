@@ -2,16 +2,20 @@
 #include <NvInferRuntime.h>
 #include <glog/logging.h>
 
+#include "nnlogger.h"
+
 #include <cmath>
 #include <fstream>
 #include <iostream>
-#include <sstream>
 #include <tuple>
 #include <vector>
 
 constexpr int kFilters = 64;
 constexpr int kBlocks = 6;
-constexpr int kBatchSize = 1;
+constexpr int kBatchSize = 16;
+
+DEFINE_string(weights, "", "weights.txt from tensorflow, see export.py");
+DEFINE_int32(batchsize, kBatchSize, "Maximum batch size");
 
 namespace nv = nvinfer1;
 
@@ -123,6 +127,11 @@ class WeightList {
     VLOG(1) << "Popped Dense " << index_ << " " << weights_t.size() << ", "
             << bias_t.size();
 
+    // Transpose the weights into cudnn format when the Dense layer's input is
+    // a convolution layer.
+    // Tensorflow: [filter_height, filter_width, in_channels, out_channels],
+    // HWIO cudnn: [output, input, filter_height, filter_width], OIHW
+    // tf.transpose(weights, [3, 2, 0, 1])
     std::vector<float> tmp(weights_t);
     nv::Weights weights{nv::DataType::kFLOAT, weights_t.data(),
                         int64_t(weights_t.size())};
@@ -150,36 +159,12 @@ class WeightList {
   std::vector<float>& Pop() { return weights_[index_++]; }
 };
 
-class Logger : public nv::ILogger {
- public:
-  void log(Severity severity, const char* msg) override {
-    // log all the things
-    switch (severity) {
-      case nv::ILogger::Severity::kVERBOSE:
-        VLOG(2) << msg;
-        break;
-      case nv::ILogger::Severity::kWARNING:
-        LOG(WARNING) << msg;
-        break;
-      case nv::ILogger::Severity::kERROR:
-        LOG(ERROR) << msg;
-        break;
-      case nv::ILogger::Severity::kINTERNAL_ERROR:
-        LOG(FATAL) << msg;
-        break;
-      default:
-        LOG(INFO) << msg;
-        break;
-    }
-  }
-};
-
 nv::ILayer* Conv(nv::INetworkDefinition* net, WeightList& wl, nv::ILayer* x,
                  int filters, nv::Dims kernel_size) {
   nv::Weights weights, bias;
   std::tie(weights, bias) =
       wl.PopConv(nv::Dims4{filters, x->getOutput(0)->getDimensions().d[1],
-                              kernel_size.d[0], kernel_size.d[1]});
+                           kernel_size.d[0], kernel_size.d[1]});
   nv::IConvolutionLayer* conv = net->addConvolutionNd(
       *x->getOutput(0), filters, kernel_size, weights, bias);
   conv->setPaddingMode(nv::PaddingMode::kSAME_UPPER);
@@ -193,7 +178,7 @@ nv::ILayer* ResBlock(nv::INetworkDefinition* net, WeightList& wl,
   nv::Weights weights, bias;
   std::tie(weights, bias) =
       wl.PopConv(nv::Dims4{filters, x->getOutput(0)->getDimensions().d[1],
-                              kernel_size.d[0], kernel_size.d[1]});
+                           kernel_size.d[0], kernel_size.d[1]});
   nv::IConvolutionLayer* conv = net->addConvolutionNd(
       *x->getOutput(0), filters, kernel_size, weights, bias);
   conv->setPaddingMode(nv::PaddingMode::kSAME_UPPER);
@@ -204,18 +189,16 @@ nv::ILayer* ResBlock(nv::INetworkDefinition* net, WeightList& wl,
 }
 
 int main(int argc, char* argv[]) {
-  if (argc != 2) {
-    LOG(FATAL) << "no weights file given";
-  }
-
   FLAGS_alsologtostderr = 1;
   FLAGS_v = 2;
   FLAGS_colorlogtostderr = 1;
+  ::google::ParseCommandLineFlags(&argc, &argv, true);
   ::google::InitGoogleLogging(argv[0]);
   ::google::InstallFailureSignalHandler();
 
   static Logger logger;
-  WeightList wl(argv[1]);
+  VLOG(1) << FLAGS_weights;
+  WeightList wl(FLAGS_weights);
 
   nv::IBuilder* builder = nv::createInferBuilder(logger);
   nv::INetworkDefinition* net = builder->createNetworkV2(0u);
@@ -224,7 +207,7 @@ int main(int argc, char* argv[]) {
 
   // input definition
   nv::ITensor* input = net->addInput("planes", nv::DataType::kFLOAT,
-                                     nv::Dims4{kBatchSize, 49, 5, 5});
+                                     nv::Dims4{FLAGS_batchsize, 49, 5, 5});
 
   // initial convolution
   std::tie(weights, bias) = wl.PopConv(nv::Dims4{64, 49, 3, 3});
@@ -261,8 +244,8 @@ int main(int argc, char* argv[]) {
   v->getOutput(0)->setName("value");
   net->markOutput(*v->getOutput(0));
 
-  builder->setMaxBatchSize(kBatchSize);
-  config->setMaxWorkspaceSize(1024 * 1024 * 1024);
+  builder->setMaxBatchSize(FLAGS_batchsize);
+  config->setMaxWorkspaceSize(16 * 1024 * 1024);
 
   nv::ICudaEngine* engine = builder->buildEngineWithConfig(*net, *config);
 
@@ -277,6 +260,7 @@ int main(int argc, char* argv[]) {
   config->destroy();
   net->destroy();
   builder->destroy();
+  ::google::ShutDownCommandLineFlags();
   ::google::ShutdownGoogleLogging();
 
   return 0;

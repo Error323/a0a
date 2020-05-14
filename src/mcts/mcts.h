@@ -6,10 +6,11 @@
 using Policy = std::array<float, kNumMoves>;
 
 class State;
+class NeuralNet;
 
 class MCTS {
  public:
-  MCTS();
+  explicit MCTS(NeuralNet &net);
 
   Policy GetPolicy(State &state, Move &best, float temp=1.0f, bool dirichlet=true);
   void Clear();
@@ -26,6 +27,11 @@ class MCTS {
   static constexpr int simulations_{800};
   static constexpr int depth_{20};
   static constexpr float alpha_{0.2f};
+
+  NeuralNet &nn_;
+  float *planes_;
+  float *policy_;
+  float *v_;
 
   float Search(State &state, int depth, float temp);
 };

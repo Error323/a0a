@@ -1,36 +1,23 @@
-#include "gpu_init.h"
+#include "gpumanager.h"
 
-#include <NvInferRuntime.h>
 #include <glog/logging.h>
-
-#include <fstream>
+#include <utils/safequeue.h>
 #include <iostream>
 
-namespace nv = nvinfer1;
+static constexpr int kNumThreads = 128;
 
-class Logger : public nv::ILogger {
- public:
-  void log(Severity severity, const char* msg) override {
-    // log all the things
-    switch (severity) {
-      case nv::ILogger::Severity::kVERBOSE:
-        VLOG(2) << msg;
-        break;
-      case nv::ILogger::Severity::kWARNING:
-        LOG(WARNING) << msg;
-        break;
-      case nv::ILogger::Severity::kERROR:
-        LOG(ERROR) << msg;
-        break;
-      case nv::ILogger::Severity::kINTERNAL_ERROR:
-        LOG(FATAL) << msg;
-        break;
-      default:
-        LOG(INFO) << msg;
-        break;
-    }
+void Run(int tid, utils::SafeQueue<work_t> &q) {
+  std::vector<output_t> v;
+  for (int i = 0; i < 800; i++) {
+    work_t work;
+    work.planes = std::vector<float>(49*5*5, tid / float(kNumThreads));
+    work.result = std::make_shared<std::promise<output_t>>();
+    q.Enqueue(work);
+    auto x = work.result->get_future().get();
+    v.emplace_back(x);
   }
-};
+  VLOG(1) << v.size() << v[1].second;
+}
 
 int main(int argc, char *argv[]) {
   if (argc != 2) {
@@ -43,50 +30,18 @@ int main(int argc, char *argv[]) {
   ::google::InitGoogleLogging(argv[0]);
   ::google::InstallFailureSignalHandler();
 
-  static Logger logger;
-  std::ifstream file(argv[1], std::ios::binary);
-  std::vector<char> data(std::istreambuf_iterator<char>(file), {});
+  utils::SafeQueue<work_t> q;
+  GpuManager gm(argv[1], q);
 
-  nv::IRuntime *runtime = nv::createInferRuntime(logger);
-  nv::ICudaEngine *engine = runtime->deserializeCudaEngine(data.data(), data.size());
-  nv::IExecutionContext *context = engine->createExecutionContext();
-
-  void *buffers[3];
-  int planes_idx = engine->getBindingIndex("planes");
-  int policy_idx = engine->getBindingIndex("policy");
-  int value_idx = engine->getBindingIndex("value");
-  std::vector<float> planes(49*5*5, 0.0f);
-  std::vector<float> policy(180, 0.0f);
-  std::vector<float> value(1, 0.0f);
-
-  cudaSafeCall(cudaMalloc(&buffers[planes_idx], planes.size() * sizeof(float)));
-  cudaSafeCall(cudaMalloc(&buffers[policy_idx], policy.size() * sizeof(float)));
-  cudaSafeCall(cudaMalloc(&buffers[value_idx], value.size() * sizeof(float)));
-
-  cudaSafeCall(cudaMemcpy(buffers[planes_idx], planes.data(), planes.size()*sizeof(float), cudaMemcpyHostToDevice));
-  if (context->execute(1, buffers)) {
-
-    cudaSafeCall(cudaMemcpy(policy.data(), buffers[policy_idx], policy.size() * sizeof(float), cudaMemcpyDeviceToHost));
-    cudaSafeCall(cudaMemcpy(value.data(), buffers[value_idx], value.size() * sizeof(float), cudaMemcpyDeviceToHost));
-    std::cout << "pi: ";
-    std::cout.precision(3);
-    std::cout << std::fixed;
-    for (int i = 0, n = policy.size(); i < n; i++) {
-      if (policy[i] > 0.0f) {
-        std::cout << i << ":" << policy[i] << " ";
-      }
-    }
-    std::cout << std::endl;
-    std::cout << "v:  " << value[0] << std::endl;
+  std::vector<std::thread> threads;
+  for (int i = 0; i < kNumThreads; i++) {
+    threads.emplace_back(std::thread(Run, i, std::ref(q)));
   }
 
-  cudaSafeCall(cudaFree(buffers[0]));
-  cudaSafeCall(cudaFree(buffers[1]));
-  cudaSafeCall(cudaFree(buffers[2]));
+  for (auto &t : threads) {
+    t.join();
+  }
 
-  context->destroy();
-  engine->destroy();
-  runtime->destroy();
   ::google::ShutdownGoogleLogging();
 
   return 0;

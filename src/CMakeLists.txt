@@ -18,6 +18,8 @@ target_link_libraries (a0a
   azul
   mcts
   profiler
+  neural
+  nvinfer
 )
 
 target_link_options (a0a PRIVATE -flto)

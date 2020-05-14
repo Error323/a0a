@@ -6,15 +6,12 @@
 
 #include "azul/state.h"
 #include "utils/random.h"
+#include "neural/neuralnet.h"
 
 static const int kReserves = 1 << 17;
 
-MCTS::MCTS() {
-  Ns_.reserve(kReserves);
-  Nsa_.reserve(kReserves);
-  Qsa_.reserve(kReserves);
-  Psa_.reserve(kReserves);
-  Wsa_.reserve(kReserves);
+MCTS::MCTS(NeuralNet &net): nn_(net) {
+  std::tie(planes_, policy_, v_) = nn_.GetBuffers();
 }
 
 Policy MCTS::GetPolicy(State& state, Move &best, float temp, bool dirichlet) {
@@ -67,14 +64,20 @@ float MCTS::Search(State& state, int depth, float temp) {
   float v;
 
   if (Ns_.find(s) == Ns_.end()) {
-    v = utils::Random::Get().GetFloat(2.0f) - 1.0f;
-    float sum = 0.0f, r;
+    // prepare input planes
+    state.MakePlanes(planes_);
+    // wait for a network batch to fill up
+    nn_.InputReady();
+    v = *v_;
+//    v = utils::Random::Get().GetFloat(2.0f) - 1.0f;
+    float sum = 0.0f, p;
 
     for (int i = 0; i < n; i++) {
-      r = utils::Random::Get().GetFloat(1.0f);
       a = std::hash<Move>()(moves[i]);
-      sum += r;
-      Psa_[s ^ a] = r;
+      p = policy_[a];
+//      p = utils::Random::Get().GetFloat(1.0f);
+      sum += p;
+      Psa_[s ^ a] = p;
       Nsa_[s ^ a] = 0;
       Wsa_[s ^ a] = 0.0f;
       Qsa_[s ^ a] = 0.0f;
